@@ -45,35 +45,37 @@ void myplot(int x, int y)
 // 3D projection - make a diagram or read any 3D graphics book.
 ///////////////////////////////////////////////////////////////
 
-void drawPoint(unsigned pt)
+void drawPoints()
 {
-    const int width=256;
-    const int height=192;
+    for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
+        const int width=256;
+        const int height=192;
 
-    // Read the statue data.
-    short wx = points[pt][0];
-    short wy = points[pt][1];
-    short wz = points[pt][2];
+        // Read the statue data.
+        short wx = points[pt][0];
+        short wy = points[pt][1];
+        short wz = points[pt][2];
 
-    // Now that we read the X,Y,Z data, project them to 2D
-    short wxnew = (mcos_old*wx - msin_old*wy)/256L;
-    short wynew = (msin_old*wx + mcos_old*wy)/256L;
-    short x = width/2L + (wynew*(Se-Sc)/(Se-wxnew))/16;
-    short y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
+        // Now that we read the X,Y,Z data, project them to 2D
+        short wxnew = (mcos_old*wx - msin_old*wy)/256L;
+        short wynew = (msin_old*wx + mcos_old*wy)/256L;
+        short x = width/2L + (wynew*(Se-Sc)/(Se-wxnew))/16;
+        short y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
 
-    // If the point is within the screen's range, plot it.
-    if (y>=0 && y<height && x>=0 && x<width)
-        myclear((int)x, (int)y);
+        // If the point is within the screen's range, plot it.
+        if (y>=0 && y<height && x>=0 && x<width)
+            myclear((int)x, (int)y);
 
-    // Now that we read the X,Y,Z data, project them to 2D
-    wxnew = (mcos*wx - msin*wy)/256L;
-    wynew = (msin*wx + mcos*wy)/256L;
-    x = width/2L + (wynew*(Se-Sc)/(Se-wxnew))/16;
-    y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
+        // Now that we read the X,Y,Z data, project them to 2D
+        wxnew = (mcos*wx - msin*wy)/256L;
+        wynew = (msin*wx + mcos*wy)/256L;
+        x = width/2L + (wynew*(Se-Sc)/(Se-wxnew))/16;
+        y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
 
-    // If the point is within the screen's range, plot it.
-    if (y>=0 && y<height && x>=0 && x<width)
-        myplot((int)x, (int)y);
+        // If the point is within the screen's range, plot it.
+        if (y>=0 && y<height && x>=0 && x<width)
+            myplot((int)x, (int)y);
+    }
 }
 
 main()
@@ -94,9 +96,7 @@ main()
         // Recompute sin/cos from the lookup table
         msin = sincos[angle].si;
         mcos = sincos[angle].co;
-
-        for(unsigned i=0; i<sizeof(points)/sizeof(points[0]); i++)
-            drawPoint(i);
+        drawPoints();
         frames = (frames + 1)%72;
         msin_old = msin;
         mcos_old = mcos;
