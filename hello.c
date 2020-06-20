@@ -52,15 +52,15 @@ void drawPoints()
         const int height=192;
 
         // Read the statue data.
-        short wx = points[pt][0];
-        short wy = points[pt][1];
-        short wz = points[pt][2];
+        int wx = points[pt][0];
+        int wy = points[pt][1];
+        int wz = points[pt][2];
 
         // Now that we read the X,Y,Z data, project them to 2D
-        short wxnew = (mcos_old*wx - msin_old*wy)/256L;
-        short wynew = (msin_old*wx + mcos_old*wy)/256L;
-        short x = width/2L + (wynew*(Se-Sc)/(Se-wxnew))/16;
-        short y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
+        int wxnew = (mcos_old*wx - msin_old*wy)/256L;
+        int wynew = (msin_old*wx + mcos_old*wy)/256L;
+        int x = width/2L + (wynew*(Se-Sc)/(Se-wxnew))/16;
+        int y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
 
         // If the point is within the screen's range, plot it.
         if (y>=0 && y<height && x>=0 && x<width) {
