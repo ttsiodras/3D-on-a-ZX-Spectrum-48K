@@ -63,8 +63,10 @@ void drawPoints()
         short y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
 
         // If the point is within the screen's range, plot it.
-        if (y>=0 && y<height && x>=0 && x<width)
-            myclear((int)x, (int)y);
+        if (y>=0 && y<height && x>=0 && x<width) {
+            uchar *target = zx_py2saddr(y) + (x>>3);
+            *target &= ~(128 >> (x&7));
+        }
 
         // Now that we read the X,Y,Z data, project them to 2D
         wxnew = (mcos*wx - msin*wy)/256L;
@@ -73,8 +75,10 @@ void drawPoints()
         y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
 
         // If the point is within the screen's range, plot it.
-        if (y>=0 && y<height && x>=0 && x<width)
-            myplot((int)x, (int)y);
+        if (y>=0 && y<height && x>=0 && x<width) {
+            uchar *target = zx_py2saddr(y) + (x>>3);
+            *target |= (128 >> (x&7));
+        }
     }
 }
 
