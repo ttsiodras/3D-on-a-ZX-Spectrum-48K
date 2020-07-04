@@ -9,7 +9,7 @@ ${EXE}:	hello.c $(wildcard *.h)
 	@echo "[LD] " $@
 
 run:	${EXE}
-	fuse $<
+	fuse --speed 5000 $<
 
 clean:
 	@echo "[CLEAN]"
