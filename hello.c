@@ -1,7 +1,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
-#include <input.h>
 
 #include "sincos.h"
 #include "statue.h"
