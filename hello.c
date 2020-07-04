@@ -71,7 +71,7 @@ void drawPoints()
         wxnew = (mcos*wx - msin*wy)/256L;
         wynew = (msin*wx + mcos*wy)/256L;
         x = width/2L + (wynew*(Se-Sc)/(Se-wxnew))/16;
-        if (&& x>=0 && x<width) {
+        if (x>=0 && x<width) {
             int y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
             // If the point is within the screen's range, plot it.
             if (y>=0 && y<height) {
