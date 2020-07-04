@@ -16,7 +16,7 @@ static long msin = 0, mcos = 0;
 static long msin_old = 0, mcos_old = 0;
 
 // Distance from the statue (in fixed point 24.8)
-const long Se = 25*256 + maxx;
+const long Se = 35*256 + maxx;
 const long Sc = 20*256 + maxx;
 
 // Frame counter
