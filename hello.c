@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <math.h>
+#include <input.h>
 
 #include "sincos.h"
 #include "statue.h"
@@ -93,6 +94,9 @@ main()
     //     // myplot(i<<1, i);
     //     // in_Pause(100);
     // }
+    uint oo = in_LookupKey('o');
+    uint pp = in_LookupKey('p');
+    uint qq = in_LookupKey('q');
     while(1) {
         // Rotate by 5 degrees on each iteration (360/72)
         angle = frames%72;
@@ -100,7 +104,12 @@ main()
         msin = sincos[angle].si;
         mcos = sincos[angle].co;
         drawPoints();
-        frames = (frames + 1)%72;
+        if (in_KeyPressed(oo))
+            frames = (frames + 71)%72;
+        else if (in_KeyPressed(pp))
+            frames = (frames + 1)%72;
+        else if (in_KeyPressed(qq))
+            break;
         msin_old = msin;
         mcos_old = mcos;
     }
