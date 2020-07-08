@@ -57,19 +57,21 @@ void drawPoints()
         int wz = points[pt][2];
 
         // Now that we read the X,Y,Z data, project them to 2D
-        int wxnew = (mcos_old*wx - msin_old*wy)/256L;
-        int wynew = (msin_old*wx + mcos_old*wy)/256L;
+        int wxnew = wx+mcos_old; // (mcos*wx - msin*wy)/256L;
+        int wynew = wy+msin_old; // (msin*wx + mcos*wy)/256L;
         int x = width/2L + (wynew*(Se-Sc)/(Se-wxnew))/16;
         if (x>=0 && x<width) {
             int y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
+            // If the point is within the screen's range, plot it.
             if (y>=0 && y<height) {
                 uchar *target = zx_py2saddr(y) + (x>>3);
                 *target &= ~(128 >> (x&7));
             }
         }
+
         // Now that we read the X,Y,Z data, project them to 2D
-        wxnew = (mcos*wx - msin*wy)/256L;
-        wynew = (msin*wx + mcos*wy)/256L;
+        wxnew = wx+mcos; // (mcos*wx - msin*wy)/256L;
+        wynew = wy+msin; // (msin*wx + mcos*wy)/256L;
         x = width/2L + (wynew*(Se-Sc)/(Se-wxnew))/16;
         if (x>=0 && x<width) {
             int y = height/2L - (wz*(Se-Sc)/(Se-wxnew))/16;
@@ -87,29 +89,28 @@ main()
     int frames = 0;
 
     cls();
-    // for(int i=0; i<72; i++) {
-    //     int y = (sincos[i].si + 256) >> 2;
-    //     int x = (sincos[i].co + 256) >> 1;
-    //     myplot(x, y);
-    //     // myplot(i<<1, i);
-    //     // in_Pause(100);
-    // }
+#ifdef MANUAL_CONTROL
     uint oo = in_LookupKey('o');
     uint pp = in_LookupKey('p');
     uint qq = in_LookupKey('q');
+#endif
     while(1) {
         // Rotate by 5 degrees on each iteration (360/72)
         angle = frames%72;
         // Recompute sin/cos from the lookup table
-        msin = sincos[angle].si;
-        mcos = sincos[angle].co;
+        msin = 16*sincos[angle].si;
+        mcos = 16*sincos[angle].co;
         drawPoints();
+#ifdef MANUAL_CONTROL
         if (in_KeyPressed(oo))
             frames = (frames + 71)%72;
         else if (in_KeyPressed(pp))
             frames = (frames + 1)%72;
         else if (in_KeyPressed(qq))
             break;
+#else
+        frames = (frames + 1)%72;
+#endif
         msin_old = msin;
         mcos_old = mcos;
     }
