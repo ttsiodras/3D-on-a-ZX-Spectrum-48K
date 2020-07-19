@@ -7,6 +7,10 @@
 #include "sincos.h"
 #include "statue.h"
 
+#define printInk(k)          printf("\x10%c", '0'+(k))
+#define printPaper(k)        printf("\x11%c", '0'+(k))
+#define printAt(row, col)    printf("\x16%c%c", (col)+1, (row)+1)
+
 // The angle of rotation in the Z-axis. Goes from 0 up to 71 for a full circle
 // (see lookup table inside sincos.h).
 static int angle = 0;
@@ -17,9 +21,6 @@ static int msin_old = 0, mcos_old = 0;
 const int Se = 16*16 + maxx/16;
 const int SCREEN_DISTX = 100;
 const int SCREEN_DISTY = 80;
-
-// Frame counter
-static int frames = 0;
 
 void cls()
 {
@@ -83,13 +84,15 @@ void drawPoints()
 
 main()
 {
-    int frames = 0;
+    long frames = 0;
     long m = 0, st, en;
 
     cls();
     zx_border(INK_BLACK);
     memset((void *)22528.0, 7, 768);
-
+    printPaper(0);
+    printInk(7);
+    printf("[-] Loading statue...\n");
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
         points[pt][0] /= 16;
         points[pt][1] /= 16;
@@ -99,16 +102,17 @@ main()
         sincos[pt].si /= 4;
         sincos[pt].co /= 4;
     }
+    printf("[-] Rendering...\n");
+    printf("[-] Q to quit...\n");
 #ifdef MANUAL_CONTROL
     uint oo = in_LookupKey('o');
     uint pp = in_LookupKey('p');
-    uint qq = in_LookupKey('q');
 #endif
+    uint qq = in_LookupKey('q');
     st = clock();
-    // while(frames != 71) {
     while(1) {
         // Rotate by 5 degrees on each iteration (360/72)
-        angle = frames%72;
+        angle = frames%72L;
         // Recompute sin/cos from the lookup table
         msin = sincos[angle].si;
         mcos = sincos[angle].co;
@@ -118,15 +122,14 @@ main()
             frames = (frames + 71)%72;
         else if (in_KeyPressed(pp))
             frames = (frames + 1)%72;
-        else if (in_KeyPressed(qq))
-            break;
 #else
-        frames = (frames + 1)%72;
+        frames++;
+        if (in_KeyPressed(qq))
+            break;
 #endif
         msin_old = msin;
         mcos_old = mcos;
     }
     en = clock();
-    cls();
-    printf("Took %ld clock ticks\n", en-st );
+    printf("[-] Rendered %ld frames in %ld clock ticks\n", frames, en-st);
 }
