@@ -7,26 +7,23 @@
 #include "sincos.h"
 #include "statue.h"
 
-char *g_screen = (char *)16384;
-
 // The angle of rotation in the Z-axis. Goes from 0 up to 71 for a full circle
 // (see lookup table inside sincos.h).
 static int angle = 0;
 
-// Sine and cosine of the rotation angle (in fixed point 24.8)
 static int msin = 0, mcos = 0;
 static int msin_old = 0, mcos_old = 0;
 
-// Distance from the statue (in fixed point 24.8)
 const int Se = 16*16 + maxx/16;
+const int SCREEN_DISTX = 100;
+const int SCREEN_DISTY = 80;
 
 // Frame counter
 static int frames = 0;
 
-
 void cls()
 {
-    memset(g_screen, 0, 256*192/8);
+    memset((char *)16384, 0, 256*192/8);
 }
 
 void myclear(int x, int y)
@@ -47,7 +44,6 @@ void myplot(int x, int y)
 
 void drawPoints()
 {
-#define SCREEN_DIST 128
     const int width=256;
     const int height=192;
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
@@ -60,9 +56,9 @@ void drawPoints()
         // Now that we read the X,Y,Z data, project them to 2D
         int wxnew = wx+mcos_old; // (mcos*wx - msin*wy)/256L;
         int wynew = wy+msin_old; // (msin*wx + mcos*wy)/256L;
-        int x = width/2 + (wynew*SCREEN_DIST/(Se-wxnew));
+        int x = width/2 + (wynew*SCREEN_DISTX/(Se-wxnew));
         if (x>=0 && x<width) {
-            int y = height/2 - (wz*SCREEN_DIST/(Se-wxnew));
+            int y = height/2 - (wz*SCREEN_DISTY/(Se-wxnew));
             // If the point is within the screen's range, plot it.
             if (y>=0 && y<height) {
                 uchar *target = zx_py2saddr(y) + (x>>3);
@@ -73,9 +69,9 @@ void drawPoints()
         // Now that we read the X,Y,Z data, project them to 2D
         wxnew = wx+mcos; // (mcos*wx - msin*wy)/256L;
         wynew = wy+msin; // (msin*wx + mcos*wy)/256L;
-        x = width/2L + (wynew*SCREEN_DIST/(Se-wxnew));
+        x = width/2L + (wynew*SCREEN_DISTX/(Se-wxnew));
         if (x>=0 && x<width) {
-            int y = height/2L - (wz*SCREEN_DIST/(Se-wxnew));
+            int y = height/2L - (wz*SCREEN_DISTY/(Se-wxnew));
             // If the point is within the screen's range, plot it.
             if (y>=0 && y<height) {
                 uchar *target = zx_py2saddr(y) + (x>>3);
@@ -91,6 +87,9 @@ main()
     long m = 0, st, en;
 
     cls();
+    zx_border(INK_BLACK);
+    memset((void *)22528.0, 7, 768);
+
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
         points[pt][0] /= 16;
         points[pt][1] /= 16;
@@ -106,7 +105,8 @@ main()
     uint qq = in_LookupKey('q');
 #endif
     st = clock();
-    while(frames != 71) {
+    // while(frames != 71) {
+    while(1) {
         // Rotate by 5 degrees on each iteration (360/72)
         angle = frames%72;
         // Recompute sin/cos from the lookup table
@@ -128,5 +128,5 @@ main()
     }
     en = clock();
     cls();
-    printf("Took %ld ticks\n", en-st );
+    printf("Took %ld clock ticks\n", en-st );
 }
