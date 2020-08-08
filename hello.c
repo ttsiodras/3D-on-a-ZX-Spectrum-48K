@@ -34,11 +34,11 @@ void cls()
 // 3D projection - make a diagram or read any 3D graphics book.
 ///////////////////////////////////////////////////////////////
 
-int xx[sizeof(points)/sizeof(points[0])];
-int yy[sizeof(points)/sizeof(points[0])];
-
 void drawPoints()
 {
+    static int xx[sizeof(points)/sizeof(points[0])];
+    static int yy[sizeof(points)/sizeof(points[0])];
+
     const int width=256;
     const int height=192;
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
