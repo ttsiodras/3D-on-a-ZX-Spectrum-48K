@@ -20,8 +20,8 @@ static int msin = 0, mcos = 0;
 static int msin_old = 0, mcos_old = 0;
 
 const int Se = 16*16 + maxx/16;
-const int SCREEN_DISTX = 100;
-const int SCREEN_DISTY = 80;
+const int SCREEN_DISTX = 64;
+const int SCREEN_DISTY = 32;
 
 void cls()
 {
@@ -51,9 +51,9 @@ void drawPoints()
 
         // Now that we read the X,Y,Z data, project them to 2D
         int wxnew = wx+mcos; // (mcos*wx - msin*wy)/256L;
-        int wynew = wy+msin; // (msin*wx + mcos*wy)/256L;
-        int x = width/2L + (wynew*SCREEN_DISTX/(Se-wxnew));
-        int y = height/2L - (wz*SCREEN_DISTY/(Se-wxnew));
+        int wynew = wy+msin; // (msin*wx + mcos*wy);
+        int x = width/2L + ((wynew << 6)/(Se-wxnew));
+        int y = height/2L - ((wz << 6)/(Se-wxnew));
 
         // Set new pixel
         plot(x, y);
@@ -74,11 +74,11 @@ main()
     memset((void *)22528.0, 7, 768);
     printPaper(0);
     printInk(7);
-    printf("[-] Loading statue...\n");
+    printf("[-] Scaling statue...\n");
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
-        points[pt][0] /= 16;
-        points[pt][1] /= 16;
-        points[pt][2] /= 16;
+        points[pt][0] /= 18;
+        points[pt][1] /= 9;
+        points[pt][2] /= 9;
     }
     for(unsigned pt=0; pt<sizeof(sincos)/sizeof(sincos[0]); pt++) {
         sincos[pt].si /= 4;
