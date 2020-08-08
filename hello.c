@@ -37,8 +37,8 @@ void precomputePoints(int angle)
     const int width = 256;
     const int height = 192;
 
-    long msin = sincos[2*angle].si;
-    long mcos = sincos[2*angle].co;
+    long msin = sincos[angle].si;
+    long mcos = sincos[angle].co;
 
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
 
@@ -54,14 +54,12 @@ void precomputePoints(int angle)
         precomputed[angle][pt].x = width/2L + (25L*wynew*(Se-Sc)/(Se-wxnew))/256;
         precomputed[angle][pt].y = height/2L - (25L*wz*(Se-Sc)/(Se-wxnew))/256;
 
-        plot(precomputed[angle][pt].x, precomputed[angle][pt].y);
+        // plot(precomputed[angle][pt].x, precomputed[angle][pt].y);
     }
 }
 
-void drawPoints(int angle)
+void drawPoints(int angle, int old_angle)
 {
-    int old_angle = angle ? (angle - 1) : (TOTAL_FRAMES - 1);
-
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
         // Clear old pixel
         unplot(precomputed[old_angle][pt].x, precomputed[old_angle][pt].y);
@@ -75,7 +73,7 @@ main()
 {
     long frames = 0;
     long m = 0, st, en;
-    unsigned char angle;
+    char angle, old_angle, dangle;
 
     cls();
     zx_border(INK_BLACK);
@@ -86,20 +84,22 @@ main()
     uint oo = in_LookupKey('o');
     uint pp = in_LookupKey('p');
 #endif
-    printf("[-] Precomputing");
     uint qq = in_LookupKey('q');
+    printf("[-] Precomputing:\n", (int) angle);
     for(angle=0; angle<TOTAL_FRAMES; angle++) {
-        printf(".");
+        gotoxy(0, 1);
+        printf("[-] Frame %d/%d...\n", (int) angle, TOTAL_FRAMES);
         precomputePoints(angle);
     }
     cls();
     printf("[-] Rendering...\n");
     printf("[-] Q to quit...\n");
     angle = 0;
+    dangle = 1;
     st = clock();
     //while(frames<32) {
     while(1) {
-        drawPoints(angle);
+        drawPoints(angle, old_angle);
 #ifdef MANUAL_CONTROL
         if (in_KeyPressed(oo))
             frames = (frames + TOTAL_FRAMES - 1)%TOTAL_FRAMES;
@@ -107,9 +107,12 @@ main()
             frames = (frames + 1)%TOTAL_FRAMES;
 #else
         frames++;
-        angle++;
-        if (angle == TOTAL_FRAMES)
-            angle = 0;
+        old_angle = angle;
+        angle = angle + dangle;
+        if (angle == TOTAL_FRAMES - 1)
+            dangle = -1;
+        else if (angle == 0)
+            dangle = 1;
         if (in_KeyPressed(qq))
             break;
 #endif
