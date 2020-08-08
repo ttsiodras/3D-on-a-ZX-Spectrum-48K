@@ -36,15 +36,15 @@ void cls()
 
 void drawPoints()
 {
-    static int xx[sizeof(points)/sizeof(points[0])];
-    static int yy[sizeof(points)/sizeof(points[0])];
+    static int old_xx[sizeof(points)/sizeof(points[0])];
+    static int old_yy[sizeof(points)/sizeof(points[0])];
 
     const int width=256;
     const int height=192;
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
 
         // Clear old pixel
-        unplot(xx[pt], yy[pt]);
+        unplot(old_xx[pt], old_yy[pt]);
 
         // Read the statue data.
         int wx = points[pt][0];
@@ -61,8 +61,8 @@ void drawPoints()
         plot(x, y);
 
         // Remember new pixel to be able to clear it in the next frame
-        xx[pt] = x;
-        yy[pt] = y;
+        old_xx[pt] = x;
+        old_yy[pt] = y;
     }
 }
 
@@ -94,8 +94,8 @@ main()
 #endif
     uint qq = in_LookupKey('q');
     st = clock();
-    while(frames<32) {
-    // while(1) {
+    //while(frames<32) {
+    while(1) {
         // Rotate by 5 degrees on each iteration (360/72)
         angle = frames%72L;
         // Recompute sin/cos from the lookup table
