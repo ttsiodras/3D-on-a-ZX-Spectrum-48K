@@ -32,14 +32,13 @@ struct {
 
 void precomputePoints(int angle)
 {
-    const int Se = 16*16 + maxx/16;
-    const int SCREEN_DISTX = 64;
-    const int SCREEN_DISTY = 32;
-    const int width=256;
-    const int height=192;
+    const long Se = 25L*256L + maxx;
+    const long Sc = 20L*256L + maxx;
+    const int width = 256;
+    const int height = 192;
 
-    int msin = sincos[2*angle].si;
-    int mcos = sincos[2*angle].co;
+    long msin = sincos[2*angle].si;
+    long mcos = sincos[2*angle].co;
 
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
 
@@ -49,17 +48,18 @@ void precomputePoints(int angle)
         int wz = points[pt][2];
 
         // Now that we read the X,Y,Z data, project them to 2D
-        int wxnew = wx+mcos; // (mcos*wx - msin*wy)/256L;
-        int wynew = wy+msin; // (msin*wx + mcos*wy);
-        precomputed[angle][pt].x = width/2L + ((wynew << 6)/(Se-wxnew));
-        precomputed[angle][pt].y = height/2L - ((wz << 6)/(Se-wxnew));
+        long wxnew = (mcos*wx - msin*wy)/256L;
+        long wynew = (msin*wx + mcos*wy)/256L;
+
+        precomputed[angle][pt].x = width/2L + (25L*wynew*(Se-Sc)/(Se-wxnew))/256;
+        precomputed[angle][pt].y = height/2L - (25L*wz*(Se-Sc)/(Se-wxnew))/256;
+
+        plot(precomputed[angle][pt].x, precomputed[angle][pt].y);
     }
 }
 
 void drawPoints(int angle)
 {
-    const int width=256;
-    const int height=192;
     int old_angle = angle ? (angle - 1) : (TOTAL_FRAMES - 1);
 
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
@@ -82,16 +82,6 @@ main()
     memset((void *)22528.0, 7, 768);
     printPaper(0);
     printInk(7);
-    printf("[-] Scaling statue...\n");
-    for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
-        points[pt][0] /= 18;
-        points[pt][1] /= 9;
-        points[pt][2] /= 9;
-    }
-    for(unsigned pt=0; pt<sizeof(sincos)/sizeof(sincos[0]); pt++) {
-        sincos[pt].si /= 4;
-        sincos[pt].co /= 4;
-    }
 #ifdef MANUAL_CONTROL
     uint oo = in_LookupKey('o');
     uint pp = in_LookupKey('p');
