@@ -4,6 +4,7 @@
 #include <input.h>
 #include <time.h>
 #include <graphics.h>
+#include <conio.h>
 
 #include "sincos.h"
 #include "statue.h"
@@ -26,6 +27,7 @@ const int SCREEN_DISTY = 32;
 void cls()
 {
     memset((char *)16384, 0, 256*192/8);
+    gotoxy(0,0);
 }
 
 ///////////////////////////////////////////////////////////////
@@ -92,8 +94,8 @@ main()
 #endif
     uint qq = in_LookupKey('q');
     st = clock();
-    // while(frames<32) {
-    while(1) {
+    while(frames<32) {
+    // while(1) {
         // Rotate by 5 degrees on each iteration (360/72)
         angle = frames%72L;
         // Recompute sin/cos from the lookup table
@@ -114,5 +116,6 @@ main()
         mcos_old = mcos;
     }
     en = clock();
+    cls();
     printf("[-] Rendered %ld frames in %ld clock ticks\n", frames, en-st);
 }
