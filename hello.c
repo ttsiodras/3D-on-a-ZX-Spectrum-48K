@@ -3,6 +3,7 @@
 #include <math.h>
 #include <input.h>
 #include <time.h>
+#include <graphics.h>
 
 #include "sincos.h"
 #include "statue.h"
@@ -27,18 +28,6 @@ void cls()
     memset((char *)16384, 0, 256*192/8);
 }
 
-void myclear(int x, int y)
-{
-    uchar *target = zx_py2saddr(y) + (x>>3);
-    *target &= ~(128 >> (x&7));
-}
-
-void myplot(int x, int y)
-{
-    uchar *target = zx_py2saddr(y) + (x>>3);
-    *target |= (128 >> (x&7));
-}
-
 ///////////////////////////////////////////////////////////////
 // 3D projection - make a diagram or read any 3D graphics book.
 ///////////////////////////////////////////////////////////////
@@ -58,27 +47,15 @@ void drawPoints()
         int wxnew = wx+mcos_old; // (mcos*wx - msin*wy)/256L;
         int wynew = wy+msin_old; // (msin*wx + mcos*wy)/256L;
         int x = width/2 + (wynew*SCREEN_DISTX/(Se-wxnew));
-        if (x>=0 && x<width) {
-            int y = height/2 - (wz*SCREEN_DISTY/(Se-wxnew));
-            // If the point is within the screen's range, plot it.
-            if (y>=0 && y<height) {
-                uchar *target = zx_py2saddr(y) + (x>>3);
-                *target &= ~(128 >> (x&7));
-            }
-        }
+        int y = height/2 - (wz*SCREEN_DISTY/(Se-wxnew));
+        unplot(x, y);
 
         // Now that we read the X,Y,Z data, project them to 2D
         wxnew = wx+mcos; // (mcos*wx - msin*wy)/256L;
         wynew = wy+msin; // (msin*wx + mcos*wy)/256L;
         x = width/2L + (wynew*SCREEN_DISTX/(Se-wxnew));
-        if (x>=0 && x<width) {
-            int y = height/2L - (wz*SCREEN_DISTY/(Se-wxnew));
-            // If the point is within the screen's range, plot it.
-            if (y>=0 && y<height) {
-                uchar *target = zx_py2saddr(y) + (x>>3);
-                *target |= (128 >> (x&7));
-            }
-        }
+        y = height/2L - (wz*SCREEN_DISTY/(Se-wxnew));
+        plot(x, y);
     }
 }
 
@@ -110,6 +87,7 @@ main()
 #endif
     uint qq = in_LookupKey('q');
     st = clock();
+    // while(frames<32) {
     while(1) {
         // Rotate by 5 degrees on each iteration (360/72)
         angle = frames%72L;
