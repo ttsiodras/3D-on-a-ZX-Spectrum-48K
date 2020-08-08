@@ -14,7 +14,7 @@ ${EXE}:	hello.c $(wildcard *.h)
 	${Q}echo "[LD] " $@
 
 run:	${EXE}
-	fuse --speed 500 $<
+	fuse --speed 250 $<
 
 clean:
 	${Q}echo "[CLEAN]"
