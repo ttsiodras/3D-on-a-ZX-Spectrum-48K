@@ -32,11 +32,17 @@ void cls()
 // 3D projection - make a diagram or read any 3D graphics book.
 ///////////////////////////////////////////////////////////////
 
+int xx[sizeof(points)/sizeof(points[0])];
+int yy[sizeof(points)/sizeof(points[0])];
+
 void drawPoints()
 {
     const int width=256;
     const int height=192;
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
+
+        // Clear old pixel
+        unplot(xx[pt], yy[pt]);
 
         // Read the statue data.
         int wx = points[pt][0];
@@ -44,18 +50,17 @@ void drawPoints()
         int wz = points[pt][2];
 
         // Now that we read the X,Y,Z data, project them to 2D
-        int wxnew = wx+mcos_old; // (mcos*wx - msin*wy)/256L;
-        int wynew = wy+msin_old; // (msin*wx + mcos*wy)/256L;
-        int x = width/2 + (wynew*SCREEN_DISTX/(Se-wxnew));
-        int y = height/2 - (wz*SCREEN_DISTY/(Se-wxnew));
-        unplot(x, y);
+        int wxnew = wx+mcos; // (mcos*wx - msin*wy)/256L;
+        int wynew = wy+msin; // (msin*wx + mcos*wy)/256L;
+        int x = width/2L + (wynew*SCREEN_DISTX/(Se-wxnew));
+        int y = height/2L - (wz*SCREEN_DISTY/(Se-wxnew));
 
-        // Now that we read the X,Y,Z data, project them to 2D
-        wxnew = wx+mcos; // (mcos*wx - msin*wy)/256L;
-        wynew = wy+msin; // (msin*wx + mcos*wy)/256L;
-        x = width/2L + (wynew*SCREEN_DISTX/(Se-wxnew));
-        y = height/2L - (wz*SCREEN_DISTY/(Se-wxnew));
+        // Set new pixel
         plot(x, y);
+
+        // Remember new pixel to be able to clear it in the next frame
+        xx[pt] = x;
+        yy[pt] = y;
     }
 }
 
