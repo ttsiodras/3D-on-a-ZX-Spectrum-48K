@@ -22,8 +22,8 @@ void cls()
 }
 
 struct {
-    int x;
-    int y;
+    unsigned char *addr;
+    unsigned char mask;
 } precomputed[TOTAL_FRAMES][sizeof(points)/sizeof(points[0])];
 
 ///////////////////////////////////////////////////////////////
@@ -51,10 +51,11 @@ void precomputePoints(int angle)
         long wxnew = (mcos*wx - msin*wy)/256L;
         long wynew = (msin*wx + mcos*wy)/256L;
 
-        precomputed[angle][pt].x = width/2L + (25L*wynew*(Se-Sc)/(Se-wxnew))/256;
-        precomputed[angle][pt].y = height/2L - (25L*wz*(Se-Sc)/(Se-wxnew))/256;
+        int x = width/2L + (25L*wynew*(Se-Sc)/(Se-wxnew))/256;
+        int y = height/2L - (25L*wz*(Se-Sc)/(Se-wxnew))/256;
 
-        // plot(precomputed[angle][pt].x, precomputed[angle][pt].y);
+        precomputed[angle][pt].addr = zx_py2saddr(y) + (x>>3);
+        precomputed[angle][pt].mask = 128 >> (x&7);
     }
 }
 
@@ -62,10 +63,11 @@ void drawPoints(int angle, int old_angle)
 {
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
         // Clear old pixel
-        unplot(precomputed[old_angle][pt].x, precomputed[old_angle][pt].y);
+        
+        *precomputed[old_angle][pt].addr &= ~precomputed[old_angle][pt].mask;
 
         // Set new pixel
-        plot(precomputed[angle][pt].x, precomputed[angle][pt].y);
+        *precomputed[angle][pt].addr |= precomputed[angle][pt].mask;
     }
 }
 
@@ -80,10 +82,6 @@ main()
     memset((void *)22528.0, 7, 768);
     printPaper(0);
     printInk(7);
-#ifdef MANUAL_CONTROL
-    uint oo = in_LookupKey('o');
-    uint pp = in_LookupKey('p');
-#endif
     uint qq = in_LookupKey('q');
     printf("[-] Precomputing:\n", (int) angle);
     for(angle=0; angle<TOTAL_FRAMES; angle++) {
@@ -91,33 +89,32 @@ main()
         printf("[-] Frame %d/%d...\n", (int) angle, TOTAL_FRAMES);
         precomputePoints(angle);
     }
-    cls();
+    gotoxy(0, 1);
+    printf("[-] Frame %d/%d...\n", (int) angle, TOTAL_FRAMES);
     printf("[-] Rendering...\n");
     printf("[-] Q to quit...\n");
     angle = 0;
     dangle = 1;
     st = clock();
-    //while(frames<32) {
     while(1) {
         drawPoints(angle, old_angle);
-#ifdef MANUAL_CONTROL
-        if (in_KeyPressed(oo))
-            frames = (frames + TOTAL_FRAMES - 1)%TOTAL_FRAMES;
-        else if (in_KeyPressed(pp))
-            frames = (frames + 1)%TOTAL_FRAMES;
-#else
-        frames++;
         old_angle = angle;
         angle = angle + dangle;
         if (angle == TOTAL_FRAMES - 1)
             dangle = -1;
         else if (angle == 0)
             dangle = 1;
-        if (in_KeyPressed(qq))
+        if (in_KeyPressed(qq)) {
+            while (in_KeyPressed(qq));
             break;
-#endif
+        }
+        en = clock();
+        frames++;
+        if (frames == 0xF) {
+            gotoxy(0, 4);
+            printf("[-] %3.1f FPS\n", ((float)frames)/(((float)en-st)/50.0));
+            frames = 0;
+            st = clock();
+        }
     }
-    en = clock();
-    cls();
-    printf("[-] Rendered %ld frames in %ld clock ticks\n", frames, en-st);
 }
