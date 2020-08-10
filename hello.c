@@ -39,8 +39,6 @@ void drawPoints()
     static int old_xx[sizeof(points)/sizeof(points[0])];
     static int old_yy[sizeof(points)/sizeof(points[0])];
 
-    const int width=256;
-    const int height=192;
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
 
         // Clear old pixel
@@ -54,8 +52,8 @@ void drawPoints()
         // Now that we read the X,Y,Z data, project them to 2D
         int wxnew = wx+mcos; // (mcos*wx - msin*wy)/256L;
         int wynew = wy+msin; // (msin*wx + mcos*wy);
-        int x = width/2L + ((wynew << 6)/(Se-wxnew));
-        int y = height/2L - ((wz << 6)/(Se-wxnew));
+        int x = 128 + ((wynew << 6)/(Se-wxnew));
+        int y = 96 - ((wz << 6)/(Se-wxnew));
 
         // Set new pixel
         plot(x, y);
