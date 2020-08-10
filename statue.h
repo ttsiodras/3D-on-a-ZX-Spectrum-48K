@@ -318,7 +318,7 @@ const int points[][3] = {
     {-819, -1550, 2458}
 };
 
-#define maxx 2551
+#define MAXX 2551L
 
 #endif
 

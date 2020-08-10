@@ -32,14 +32,13 @@ struct {
 
 void precomputePoints(int angle)
 {
-    const long Se = 25L*256L + maxx;
-    const long Sc = 20L*256L + maxx;
-    const int width = 256;
-    const int height = 192;
+#define SE (25L*256L + MAXX)
+#define SC (20L*256L + MAXX)
+#define WIDTH 256L
+#define HEIGHT 192L
 
     long msin = sincos[angle].si;
     long mcos = sincos[angle].co;
-
     for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
 
         // Read the statue data.
@@ -51,8 +50,8 @@ void precomputePoints(int angle)
         long wxnew = (mcos*wx - msin*wy)/256L;
         long wynew = (msin*wx + mcos*wy)/256L;
 
-        int x = width/2L + (25L*wynew*(Se-Sc)/(Se-wxnew))/256;
-        int y = height/2L - (25L*wz*(Se-Sc)/(Se-wxnew))/256;
+        int x = WIDTH/2L + (25L*wynew*(SE-SC)/(SE-wxnew))/256;
+        int y = HEIGHT/2L + (25L*wz*(SE-SC)/(SE-wxnew))/256;
 
         precomputed[angle][pt].addr = zx_py2saddr(y) + (x>>3);
         precomputed[angle][pt].mask = 128 >> (x&7);
