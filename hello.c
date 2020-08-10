@@ -1,6 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-#include <math.h>
 #include <input.h>
 #include <time.h>
 #include <graphics.h>
@@ -62,15 +59,24 @@ main()
     long frames = 0;
     long m = 0, st, en;
 
+    //////////////
+    // Banner info
+    //////////////
     cls();
     zx_border(INK_BLACK);
     memset((void *)22528.0, 7, 768);
     printPaper(0);
     printInk(3);
     printf("[-] %d points...\n", ELEMENTS(points));
+    printf("[-] Rendering...\n");
+    printf("[-] Q to quit...\n");
+
+    ///////////////////////////////////////////////////
     // To make results fit in 16 bit, and avoid scaling
-    // in the drawPoints loop, I pre-scale here
-    // with magic constants.
+    // in the drawPoints loop, I precompute here all that
+    // I can move out of the inner loop in drawPoints.
+    // Yes, lots of magic constants :-)
+    ///////////////////////////////////////////////////
     for(unsigned i=0; i<ELEMENTS(points); i++) {
         points[i][0] /= 18;
         points[i][0] = SE-points[i][0];
@@ -84,10 +90,11 @@ main()
         sincos[i].si <<= 6;
         sincos[i].co /= 3;
     }
-    printf("[-] Rendering...\n");
-    printf("[-] Q to quit...\n");
-    printInk(7);
+
+    // Q will quit.
     uint qq = in_LookupKey('q');
+
+    // Here we go...
     st = clock();
     while(1) {
         if (in_KeyPressed(qq))
