@@ -20,8 +20,6 @@ static int angle = 0;
 static int msin = 0, mcos = 0;
 static int msin_old = 0, mcos_old = 0;
 
-#define SE (256+MAXX/16)
-
 void cls()
 {
     memset((char *)16384, 0, 256*192/8);
@@ -34,6 +32,8 @@ void cls()
 
 void drawPoints()
 {
+#define SE (256+MAXX/16)
+
     static int old_xx[sizeof(points)/sizeof(points[0])];
     static int old_yy[sizeof(points)/sizeof(points[0])];
 
