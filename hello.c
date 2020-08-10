@@ -11,9 +11,7 @@
 
 #define printInk(k)          printf("\x10%c", '0'+(k))
 #define printPaper(k)        printf("\x11%c", '0'+(k))
-
-#define ELEMENTS(x) (sizeof(x)/sizeof(x[0]))
-#define TOTAL_POINTS ELEMENTS(points)
+#define ELEMENTS(x)          (sizeof(x)/sizeof(x[0]))
 
 // The angle of rotation of the eye around the Z-axis.
 // Goes from 0 up to 71 for a full circle
@@ -30,23 +28,23 @@ void cls()
 // 3D projection - make a diagram or read any 3D graphics book.
 ///////////////////////////////////////////////////////////////
 
-void drawPoints(long angle)
+void drawPoints(int angle)
 {
 #define SE (256+MAXX/16)
 
-    static int old_xx[TOTAL_POINTS];
-    static int old_yy[TOTAL_POINTS];
+    static int old_xx[ELEMENTS(points)];
+    static int old_yy[ELEMENTS(points)];
 
     int msin = sincos[angle].si;
     int mcos = sincos[angle].co;
-    for(unsigned i=0; i<TOTAL_POINTS; i++) {
+    for(unsigned i=0; i<ELEMENTS(points); i++) {
 
         // Clear old pixel
         unplot_callee(old_xx[i], old_yy[i]);
 
         // Project to 2D. z88dk generated code speed is
         // greatly improved by inlining everything.
-        int wxnew = SE-points[i][0]-mcos;
+        int wxnew = points[i][0]-mcos;
         int x = 128 + ((points[i][1]+msin)/wxnew);
         int y = 96 - (points[i][2]/wxnew);
 
@@ -69,12 +67,13 @@ main()
     memset((void *)22528.0, 7, 768);
     printPaper(0);
     printInk(3);
-    printf("[-] %d points...\n", TOTAL_POINTS);
+    printf("[-] %d points...\n", ELEMENTS(points));
     // To make results fit in 16 bit, and avoid scaling
     // in the drawPoints loop, I pre-scale here
     // with magic constants.
-    for(unsigned i=0; i<TOTAL_POINTS; i++) {
+    for(unsigned i=0; i<ELEMENTS(points); i++) {
         points[i][0] /= 18;
+        points[i][0] = SE-points[i][0];
         points[i][1] /= 9;
         points[i][1] <<= 6;
         points[i][2] /= 9;
@@ -94,7 +93,7 @@ main()
         if (in_KeyPressed(qq))
             break;
         // Rotate by 5 degrees on each iteration (360/72)
-        drawPoints(frames%72L);
+        drawPoints((int)(frames%72L));
         // Update FPS info.
         frames++;
         en = clock();
