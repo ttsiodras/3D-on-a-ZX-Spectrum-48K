@@ -14,6 +14,7 @@
 #define printAt(row, col)    printf("\x16%c%c", (col)+1, (row)+1)
 
 #define TOTAL_FRAMES 36
+#define TOTAL_POINTS (sizeof(points)/sizeof(points[0]))
 
 void cls()
 {
@@ -24,7 +25,7 @@ void cls()
 struct {
     unsigned char *addr;
     unsigned char mask;
-} precomputed[TOTAL_FRAMES][sizeof(points)/sizeof(points[0])];
+} precomputed[TOTAL_FRAMES][TOTAL_POINTS];
 
 ///////////////////////////////////////////////////////////////
 // 3D projection - make a diagram or read any 3D graphics book.
@@ -39,7 +40,7 @@ void precomputePoints(int angle)
 
     long msin = sincos[angle].si;
     long mcos = sincos[angle].co;
-    for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
+    for(unsigned pt=0; pt<TOTAL_POINTS; pt++) {
 
         // Read the statue data.
         int wx = points[pt][0];
@@ -60,7 +61,7 @@ void precomputePoints(int angle)
 
 void drawPoints(int angle, int old_angle)
 {
-    for(unsigned pt=0; pt<sizeof(points)/sizeof(points[0]); pt++) {
+    for(unsigned pt=0; pt<TOTAL_POINTS; pt++) {
         // Clear old pixel
         
         *precomputed[old_angle][pt].addr &= ~precomputed[old_angle][pt].mask;
@@ -82,7 +83,7 @@ main()
     printPaper(0);
     printInk(7);
     uint qq = in_LookupKey('q');
-    printf("[-] Precomputing:\n", (int) angle);
+    printf("[-] Precomputing for %d points\n", TOTAL_POINTS);
     for(angle=0; angle<TOTAL_FRAMES; angle++) {
         gotoxy(0, 1);
         printf("[-] Frame %d/%d...\n", (int) angle, TOTAL_FRAMES);
