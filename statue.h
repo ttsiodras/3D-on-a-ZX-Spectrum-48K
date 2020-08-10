@@ -3,6 +3,8 @@
 
 #ifdef FLOAT
 
+// The original statue data.
+// Unused here; they are pre-scaled in 8.8 fixed-point below.
 const float points[][3] = {
     {0.1312855, 0.11608299999999999, -0.5005139999999999},
     {0.1759435, 0.08417239999999998, -0.30605499999999997},
