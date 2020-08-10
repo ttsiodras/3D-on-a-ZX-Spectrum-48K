@@ -1,7 +1,7 @@
 I've been fooling around with SW-only 3D graphics
 [for quite some time](https://www.thanassis.space/renderer.html).
-A couple of years ago, I ported the main logic into an
-ATmega328P microcontroller, implementing "points-only" 3D rendering,
+A couple of years ago, [I ported the main logic](https://github.com/ttsiodras/3D-on-an-ATmega328p/)
+into an ATmega328P microcontroller, implementing "points-only" 3D rendering,
 and driving an OLED display via the SPI interface...  at the
 magnificent resolution of 128x64 :-)
 
@@ -11,13 +11,20 @@ magnificent resolution of 128x64 :-)
 </a>
 </center>
 
-So the path to even more useless tinkering was clear: I had to make
-this work for my ZX Spectrum 48K! :-)
+So the path to even more useless tinkering was clear:
+
+**I had to make this work for my ZX Spectrum 48K! :-)**
 
 And I did.
 
+<center>
+<a href="https://youtu.be/Zdb0Jd97Hzw" target="_blank">
+<img src="contrib/speccy3d.jpg">
+</a>
+</center>
+
 Since the Speccy's brain is even tinier than the ATmega328P's, 
-I had to take even more liberies:  I changed the computation
+I had to take even more liberties:  I changed the computation
 loop to orbit the head around (instead of the statue), thus
 leading to the simplest possible equations:
 
