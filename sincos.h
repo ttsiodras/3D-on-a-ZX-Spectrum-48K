@@ -1,3 +1,8 @@
+#ifndef __SINCOS_H__
+#define __SINCOS_H__
+
+// Lookup table for scaled sine/cosine values (times 256)
+// Contains 72 entries (5 degrees steps - 360/72 = 5)
 struct {
     int si;
     int co;
@@ -75,3 +80,5 @@ struct {
     {-44,252},
     {-22,255},
 };
+
+#endif

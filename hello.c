@@ -12,14 +12,13 @@
 #define printInk(k)          printf("\x10%c", '0'+(k))
 #define printPaper(k)        printf("\x11%c", '0'+(k))
 
-#define TOTAL_POINTS (sizeof(points)/sizeof(points[0]))
+#define ELEMENTS(x) (sizeof(x)/sizeof(x[0]))
+#define TOTAL_POINTS ELEMENTS(points)
 
-// The angle of rotation in the Z-axis. Goes from 0 up to 71 for a full circle
+// The angle of rotation of the eye around the Z-axis.
+// Goes from 0 up to 71 for a full circle
 // (see lookup table inside sincos.h).
 static int angle = 0;
-
-static int msin = 0, mcos = 0;
-static int msin_old = 0, mcos_old = 0;
 
 void cls()
 {
@@ -38,33 +37,26 @@ void drawPoints(long angle)
     static int old_xx[TOTAL_POINTS];
     static int old_yy[TOTAL_POINTS];
 
-    msin = sincos[angle].si;
-    mcos = sincos[angle].co;
-    for(unsigned pt=0; pt<TOTAL_POINTS; pt++) {
+    int msin = sincos[angle].si;
+    int mcos = sincos[angle].co;
+    for(unsigned i=0; i<TOTAL_POINTS; i++) {
 
         // Clear old pixel
-        unplot_callee(old_xx[pt], old_yy[pt]);
+        unplot_callee(old_xx[i], old_yy[i]);
 
-        // Read the statue data.
-        int wx = points[pt][0];
-        int wy = points[pt][1];
-        int wz = points[pt][2];
-
-        // Now that we read the X,Y,Z data, project them to 2D
-        int wxnew = wx+mcos; // (mcos*wx - msin*wy)/256L;
-        int wynew = wy+msin; // (msin*wx + mcos*wy);
-        int x = 128 + ((wynew << 6)/(SE-wxnew));
-        int y = 96 - ((wz << 6)/(SE-wxnew));
+        // Project to 2D. z88dk generated code speed is
+        // greatly improved by inlining everything.
+        int wxnew = SE-points[i][0]-mcos;
+        int x = 128 + ((points[i][1]+msin)/wxnew);
+        int y = 96 - (points[i][2]/wxnew);
 
         // Set new pixel
         plot_callee(x, y);
 
         // Remember new pixel to be able to clear it in the next frame
-        old_xx[pt] = x;
-        old_yy[pt] = y;
+        old_xx[i] = x;
+        old_yy[i] = y;
     }
-    msin_old = msin;
-    mcos_old = mcos;
 }
 
 main()
@@ -78,27 +70,32 @@ main()
     printPaper(0);
     printInk(3);
     printf("[-] %d points...\n", TOTAL_POINTS);
-    for(unsigned pt=0; pt<TOTAL_POINTS; pt++) {
-        points[pt][0] /= 18;
-        points[pt][1] /= 9;
-        points[pt][2] /= 9;
+    // To make results fit in 16 bit, and avoid scaling
+    // in the drawPoints loop, I pre-scale here
+    // with magic constants.
+    for(unsigned i=0; i<TOTAL_POINTS; i++) {
+        points[i][0] /= 18;
+        points[i][1] /= 9;
+        points[i][1] <<= 6;
+        points[i][2] /= 9;
+        points[i][2] <<= 6;
     }
-    for(unsigned pt=0; pt<sizeof(sincos)/sizeof(sincos[0]); pt++) {
-        sincos[pt].si /= 4;
-        sincos[pt].co /= 4;
+    for(unsigned i=0; i<ELEMENTS(sincos); i++) {
+        sincos[i].si /= 3;
+        sincos[i].si <<= 6;
+        sincos[i].co /= 3;
     }
     printf("[-] Rendering...\n");
     printf("[-] Q to quit...\n");
     printInk(7);
     uint qq = in_LookupKey('q');
     st = clock();
-    //while(frames<32) {
     while(1) {
         if (in_KeyPressed(qq))
             break;
         // Rotate by 5 degrees on each iteration (360/72)
         drawPoints(frames%72L);
-
+        // Update FPS info.
         frames++;
         en = clock();
         if (0xF == (frames & 0xF)) {
