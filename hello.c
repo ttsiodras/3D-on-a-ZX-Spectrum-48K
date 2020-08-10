@@ -20,9 +20,7 @@ static int angle = 0;
 static int msin = 0, mcos = 0;
 static int msin_old = 0, mcos_old = 0;
 
-const int Se = 16*16 + maxx/16;
-const int SCREEN_DISTX = 64;
-const int SCREEN_DISTY = 32;
+#define SE (256+MAXX/16)
 
 void cls()
 {
@@ -52,8 +50,8 @@ void drawPoints()
         // Now that we read the X,Y,Z data, project them to 2D
         int wxnew = wx+mcos; // (mcos*wx - msin*wy)/256L;
         int wynew = wy+msin; // (msin*wx + mcos*wy);
-        int x = 128 + ((wynew << 6)/(Se-wxnew));
-        int y = 96 - ((wz << 6)/(Se-wxnew));
+        int x = 128 + ((wynew << 6)/(SE-wxnew));
+        int y = 96 - ((wz << 6)/(SE-wxnew));
 
         // Set new pixel
         plot(x, y);
