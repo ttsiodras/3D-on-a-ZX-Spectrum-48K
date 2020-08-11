@@ -21,116 +21,177 @@ void cls()
     gotoxy(0,0);
 }
 
-///////////////////////////////////////////////////////////////
-// 3D projection - make a diagram or read any 3D graphics book.
-///////////////////////////////////////////////////////////////
+/////////////////
+// 3D projection 
+/////////////////
 
+// Inline assembly requires global symbols for visibility
+// (the variables below are accessed in the Z80 asm code
+//  via their C-mangled named (i.e. prefixed with '_').
+
+// The buffer keeping the old frame's screen offset/pixel mask
 unsigned char g_old_vram_offsets[3*ELEMENTS(points)];
-int msin;
-int mcos;
+
+// The scaled sin/cos for the angle being rendered in this frame
+int msin, mcos;
+
+// Too few registers in the Z80! I needed some scratch space
+// to hold the pointer moving through the "points" data,
+// as well as the computed screen X coordinate and the
+// computed screen offset.
 int scratch;
 int new_x;
-int new_y;
 unsigned new_offset;
 
-#define SE (256+MAXX/16)
+// Inline Z80 assembly! After 4 decades, I "spoke" Z80 again today :-)
+// And it was worth it - frame rate went from 5.4 to 9.4 FPS.
+//
+// The Z80 C compilers are nowhere near as powerful as the GCC/Clang
+// world. Read this to see why:
+//
+//    https://retrocomputing.stackexchange.com/questions/6095/
+//
+// ...ergo, the need for manually written ASM.
+// Quite the puzzle, this was - but I pulled it off :-)
 
 void drawPoints(int angle)
 {
-    uchar *dest;
     msin = sincos[angle].si;
     mcos = sincos[angle].co;
 #asm
+    extern l_fast_divs_16_16x16
     push bc
     push de
     push hl
     push af
-    ld b, 153
+    ld b, 153 ; ELEMENTS(points)
     ld hl, _g_old_vram_offsets
     exx
     ld hl, _points
     ld bc, (_mcos)
     exx
 loop_point:
-    ; Clear the old pixels
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; Clear the old frames pixel
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ld e, (hl)
     inc hl
     ld d, (hl) ; DE is now pointing to old pixel's offset
     inc hl
     ld a, (hl) ; A is now the old pixel's mask (e.g. 64)
     dec hl
-    dec hl ; hl back to g_old_vram_offsets[pt*3]
+    dec hl ; hl back to g_old_vram_offsets[pt*3], to write new values into
     xor 255
     ld c, a
     ld a, (de)
     and c
     ld (de), a ; Clear pixel
 
-    ; OK, now to set the new pixel
-    exx ; hl now points to the ... points
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; Switch to helper register set
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    exx ; hl now set to &points[i][0]
+
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; Compute and set the new pixel
+    ; First, compute the common dividend (wxnew)
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
     ld e, (hl)
     inc hl
-    ld d, (hl) ; de has points[i][0]
+    ld d, (hl) ; de has points[i][0], i.e. X
     inc hl
     ex de, hl ; hl has points[i][0], de has &points[i][1]
     or a ; clear carry
     sbc hl, bc ; hl is now points[i][0] - mcos = wxnew
     ex de, hl ; hl has &points[i][1], de has wxnew
 
+    ;;;;;;;;;;;;;;;;;;;;
+    ; Computing screen X
+    ;;;;;;;;;;;;;;;;;;;;
     push bc ; save bc (mcos)
     push de ; save de (wxnew)
     ld bc, (_msin)
     ld e, (hl)
     inc hl
-    ld d, (hl) ; de has points[i][1]
+    ld d, (hl) ; de has points[i][1], i.e. Y
     inc hl     ; hl has &points[i][2]
     ld (_scratch), hl
-    ld hl, de  ; hl has points[i][1]
+    ld hl, de  ; hl has points[i][1], i.e. Y
     add hl, bc ; hl = points[i][1] + msin
     pop de     ; de = wxnew
     push de    ; save wxnew in stack, we will need it again
-    call l_div ; hl = hl/de
+    call l_fast_divs_16_16x16 ; hl = hl/de
     ld de, 128
     adc hl, de
     ld (_new_x), hl
 
+    ;;;;;;;;;;;;;;;;;;;;
+    ; Computing screen Y
+    ;;;;;;;;;;;;;;;;;;;;
     ld hl, (_scratch) ;  &points[i][2]
     ld e, (hl)
     inc hl
-    ld d, (hl) ; de has points[i][2]
+    ld d, (hl) ; de has points[i][2], i.e. Z
     inc hl     ; hl has &points[i+1][0]
     ex de, hl  ; de has &points[i+1][0], hl has points[i][2]
     ld bc, de  ; save &points[i+1][0] into bc
     pop de ; de is wxnew again
-    call l_div ; hl =  points[i][2] / wxnew
+    push bc
+    call l_fast_divs_16_16x16 ; hl =  points[i][2] / wxnew
+    pop bc
     ld de, hl  ; de =  points[i][2] / wxnew
     ld hl, 96
+    or a ; clear carry
     sbc hl, de
+
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; Check if Y is within bounds
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     push hl
     ld a, h
-    and 0x80
+    and 0x80 ; negative
     jnz bad_y
-    ld bc, 192
-    sbc hl, bc
+    ld de, 192
+    or a ; clear carry
+    sbc hl, de ; larger than 191
     jnc bad_y
+
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; All good, compute the screen offset
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
     pop hl ; hl is new_y
     call zx_py2saddr
     ld a, (_new_x)
-    ld c, a
-    srl c
-    srl c
-    srl c
-    add hl, bc
+    ld e, a  ; d is already 0
+    srl e
+    srl e
+    srl e
+    add hl, de
     ld (_new_offset), hl
+    ld hl, bc ; get &points[i+1][0] into hl
     pop bc ; bc is now mcos again
-    exx ; back to normal register set
 
-    ; Write the offset and mask for the new_x and new_y
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; Switch back to normal register set
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    exx ; hl back to g_old_vram_offsets
+
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; Store the offset and mask for the new pixel
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ld de, (_new_offset)
     ld (hl), e
     inc hl
     ld (hl), d
-    inc hl ; new offset written
+    inc hl ; new offset written into g_old_vram_offsets
+
+    ;;;;;;;;;;;;;;;;;;
+    ; Compute the mask
+    ;;;;;;;;;;;;;;;;;;
     push bc
     ld a, (_new_x)
     and 7
@@ -151,6 +212,7 @@ write_mask:
     ld d, (hl)
     ld hl, de
     or (hl)
+    ld (hl), a
     pop hl
     inc hl
     pop bc
@@ -162,6 +224,7 @@ just_128:
 
     bad_y:
     pop hl ; useless but must cleanup stack
+    ld hl, bc ; get &points[i+1][0] into hl
     pop bc ; bc is now mcos again
     exx ; back to normal register set
         ; so hl  back to g_old_vram_offsets
@@ -182,31 +245,6 @@ loop_closing:
     pop de
     pop bc
 #endasm
-    // dest = &g_old_vram_offsets[0];
-    // for(unsigned i=0; i<ELEMENTS(points); i++) {
-
-    //     // Project to 2D. z88dk generated code speed is
-    //     // greatly improved by inlining everything.
-    //     int wxnew = points[i][0]-mcos;
-    //     int x = 128 + ((points[i][1]+msin)/wxnew);
-    //     int y = 96 - (points[i][2]/wxnew);
-    //     if (y<0 || y>191) {
-    //         *dest++ = 0x00;
-    //         *dest++ = 0x40;
-    //         *dest++ = 0x80;
-    //         continue;
-    //     }
-
-    //     // Set new pixel
-    //     uchar *offset = zx_py2saddr(y) + (x>>3);
-    //     uchar mask = 128 >> (x&7);
-    //     *offset |= mask;
-
-    //     // Remember new pixel to be able to clear it in the next frame
-    //     *dest++ = ((unsigned)offset) & 0xFF;
-    //     *dest++ = (((unsigned)offset) & 0xFF00) >> 8;
-    //     *dest++ = mask;
-    // }
 }
 
 main()
@@ -232,6 +270,8 @@ main()
     // I can move out of the inner loop in drawPoints.
     // Yes, lots of magic constants :-)
     ///////////////////////////////////////////////////
+    #define SE (256+MAXX/16)
+
     for(unsigned i=0; i<ELEMENTS(points); i++) {
         points[i][0] /= 18;
         points[i][0] = SE-points[i][0];
