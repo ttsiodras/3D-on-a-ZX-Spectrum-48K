@@ -57,7 +57,7 @@ void drawPoints(int angle)
 main()
 {
     long frames = 0;
-    long m = 0, st, en;
+    long m = 0, st, en, total_clocks = 0;
 
     //////////////
     // Banner info
@@ -95,19 +95,20 @@ main()
     uint qq = in_LookupKey('q');
 
     // Here we go...
-    st = clock();
     while(1) {
         if (in_KeyPressed(qq))
             break;
         // Rotate by 5 degrees on each iteration (360/72)
+        st = clock();
         drawPoints((int)(frames%72L));
+        en = clock();
+        total_clocks += (en-st);
         // Update FPS info.
         frames++;
-        en = clock();
         if (0xF == (frames & 0xF)) {
             gotoxy(0, 3);
             printInk(3);
-            printf("[-] %3.1f FPS\n", ((float)frames)/(((float)en-st)/CLOCKS_PER_SEC));
+            printf("[-] %3.1f FPS\n", ((float)frames)/(((float)total_clocks)/CLOCKS_PER_SEC));
 	}
     }
 }
