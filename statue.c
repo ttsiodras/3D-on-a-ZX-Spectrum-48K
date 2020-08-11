@@ -22,12 +22,14 @@ void cls()
     gotoxy(0,0);
 }
 
+// To fit in memory, we use 16 bits per pixel; the upper 13
+// store the video RAM offset (0 - 0x1800) and the lower 3
+// store the pixel offset within that byte (0-7).
 unsigned precomputed[TOTAL_FRAMES][TOTAL_POINTS];
 
 ///////////////////////////////////////////////////////////////
 // 3D projection.
 ///////////////////////////////////////////////////////////////
-
 void precomputePoints(int angle)
 {
 #define SE (25L*256L + MAXX)
@@ -52,8 +54,7 @@ void precomputePoints(int angle)
         // we need two things:
         //
         // - compute in long (8.8 x 8.8 => 16.16)
-        // - scale down by 256, to truncate the result
-        //   back into 8.8
+        // - scale down by 256, to truncate the result back into 8.8
         long wxnew = (mcos*wx - msin*wy)/256L;
         long wynew = (msin*wx + mcos*wy)/256L;
 
@@ -63,25 +64,34 @@ void precomputePoints(int angle)
         int x = WIDTH/2L + (25L*wynew*(SE-SC)/(SE-wxnew))/256;
         int y = HEIGHT/2L + (25L*wz*(SE-SC)/(SE-wxnew))/256;
 
+        // Store the final memory access coordinates in 16 bits/pixel:
+        // - The offset within the 6K of video RAM, in the upper 13 bits
+        // - The pixel (0-7) within that byte, in the lower 3 bits
         unsigned offset = zx_py2saddr(y) + (x>>3) - 0x4000;
         precomputed[angle][pt] = (offset << 3) | (x&7);
     }
 }
 
+//////////////////////////////////////////////////////////////
+// Clear previous frames points, and draw new frame's points,
+// using the precomputed video RAM offsets.
+//////////////////////////////////////////////////////////////
 void drawPoints(int angle, int old_angle)
 {
+    unsigned *old_data = &precomputed[old_angle][0];
+    unsigned *new_data = &precomputed[angle][0];
     for(unsigned pt=0; pt<TOTAL_POINTS; pt++) {
 
         // Clear old pixel
         unsigned char *pixel = (unsigned char*)0x4000;
-        pixel += ((precomputed[old_angle][pt] & 0xFFF8) >> 3);
-        unsigned char mask = 128 >> (precomputed[old_angle][pt] & 7);
+        pixel += ((*old_data & 0xFFF8) >> 3);
+        unsigned char mask = 128 >> (*old_data++ & 7);
         *pixel &= ~mask;
 
         // Set new pixel
         pixel = (unsigned char*)0x4000;
-        pixel += ((precomputed[angle][pt] & 0xFFF8) >> 3);
-        mask = 128 >> (precomputed[angle][pt] & 7);
+        pixel += ((*new_data & 0xFFF8) >> 3);
+        mask = 128 >> (*new_data++ & 7);
         *pixel |= mask;
     }
 }
@@ -93,12 +103,15 @@ main()
     char angle, old_angle;
 
     cls();
+    // Set everything to black
     zx_border(INK_BLACK);
     memset((void *)22528.0, 7, 768);
     printPaper(0);
     printInk(7);
     uint qq = in_LookupKey('q');
     printf("[-] Precomputing for %d points\n", TOTAL_POINTS);
+    // Precompute the video RAM offsets and pixel coordinate
+    // for each one of the rotation angles of the statue
     for(angle=0; angle<TOTAL_FRAMES; angle++) {
         gotoxy(0, 1);
         printf("[-] Frame %d/%d...\n", (int) angle, TOTAL_FRAMES);
@@ -106,6 +119,8 @@ main()
     }
     gotoxy(0, 1);
     printf("[-] Frame %d/%d...\n", (int) angle, TOTAL_FRAMES);
+
+    // Statistics  banner on the upper left, will show FPS
     printf("[-] Rendering...\n");
     printf("[-] Q to quit...\n");
     angle = 0;
