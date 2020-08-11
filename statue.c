@@ -74,7 +74,7 @@ void drawPoints(int angle, int old_angle)
 main()
 {
     long frames = 0;
-    long m = 0, st, en;
+    long m = 0, st, total_clocks = 0;
     char angle, old_angle, dangle;
 
     cls();
@@ -95,9 +95,10 @@ main()
     printf("[-] Q to quit...\n");
     angle = 0;
     dangle = 1;
-    st = clock();
     while(1) {
+        st = clock();
         drawPoints(angle, old_angle);
+        total_clocks += clock() - st;
         old_angle = angle;
         angle = angle + dangle;
         if (angle == TOTAL_FRAMES - 1)
@@ -108,13 +109,10 @@ main()
             while (in_KeyPressed(qq));
             break;
         }
-        en = clock();
         frames++;
-        if (frames == 0xF) {
+        if (0xF == (frames & 0xF)) {
             gotoxy(0, 4);
-            printf("[-] %3.1f FPS\n", ((float)frames)/(((float)en-st)/50.0));
-            frames = 0;
-            st = clock();
+            printf("[-] %3.1f FPS\n", ((float)frames)/(((float)total_clocks)/CLOCKS_PER_SEC));
         }
     }
 }
