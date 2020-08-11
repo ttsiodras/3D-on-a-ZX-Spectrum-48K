@@ -31,6 +31,7 @@ int mcos;
 int scratch;
 int new_x;
 int new_y;
+unsigned new_offset;
 
 #define SE (256+MAXX/16)
 
@@ -51,12 +52,14 @@ void drawPoints(int angle)
     ld bc, (_mcos)
     exx
 loop_point:
+    ; Clear the old pixels
     ld e, (hl)
     inc hl
     ld d, (hl) ; DE is now pointing to old pixel's offset
     inc hl
     ld a, (hl) ; A is now the old pixel's mask (e.g. 64)
-    inc hl
+    dec hl
+    dec hl ; hl back to g_old_vram_offsets[pt*3]
     xor 255
     ld c, a
     ld a, (de)
@@ -68,6 +71,7 @@ loop_point:
     ld e, (hl)
     inc hl
     ld d, (hl) ; de has points[i][0]
+    inc hl
     ex de, hl ; hl has points[i][0], de has &points[i][1]
     or a ; clear carry
     sbc hl, bc ; hl is now points[i][0] - mcos = wxnew
@@ -89,18 +93,88 @@ loop_point:
     ld de, 128
     adc hl, de
     ld (_new_x), hl
+
+    ld hl, (_scratch) ;  &points[i][2]
+    ld e, (hl)
+    inc hl
+    ld d, (hl) ; de has points[i][2]
+    inc hl     ; hl has &points[i+1][0]
+    ex de, hl  ; de has &points[i+1][0], hl has points[i][2]
+    ld bc, de  ; save &points[i+1][0] into bc
     pop de ; de is wxnew again
-
-    ld hl, (_scratch)
-
-
-
-
-
-    pop de ; de was wxnew again
+    call l_div ; hl =  points[i][2] / wxnew
+    ld de, hl  ; de =  points[i][2] / wxnew
+    ld hl, 96
+    sbc hl, de
+    push hl
+    ld a, h
+    and 0x80
+    jnz bad_y
+    ld bc, 192
+    sbc hl, bc
+    jnc bad_y
+    pop hl ; hl is new_y
+    call zx_py2saddr
+    ld a, (_new_x)
+    ld c, a
+    srl c
+    srl c
+    srl c
+    add hl, bc
+    ld (_new_offset), hl
     pop bc ; bc is now mcos again
-
     exx ; back to normal register set
+
+    ; Write the offset and mask for the new_x and new_y
+    ld de, (_new_offset)
+    ld (hl), e
+    inc hl
+    ld (hl), d
+    inc hl ; new offset written
+    push bc
+    ld a, (_new_x)
+    and 7
+    jz just_128
+    ld b, a
+    ld a, 128
+shift_loop:
+    srl a
+    djnz shift_loop
+
+write_mask:
+    ld (hl), a
+    push hl
+    dec hl
+    dec hl
+    ld e, (hl)
+    inc hl
+    ld d, (hl)
+    ld hl, de
+    or (hl)
+    pop hl
+    inc hl
+    pop bc
+    jmp loop_closing
+
+just_128:
+    ld a, 128
+    jmp write_mask
+
+    bad_y:
+    pop hl ; useless but must cleanup stack
+    pop bc ; bc is now mcos again
+    exx ; back to normal register set
+        ; so hl  back to g_old_vram_offsets
+    ld (hl), 0x00
+    inc hl
+    ld (hl), 0x40
+    inc hl
+    ld (hl), 0x80
+    inc hl
+    jmp loop_closing
+
+
+loop_closing:
     dec b
     jnz loop_point
     pop af
@@ -108,31 +182,31 @@ loop_point:
     pop de
     pop bc
 #endasm
-    dest = &g_old_vram_offsets[0];
-    for(unsigned i=0; i<ELEMENTS(points); i++) {
+    // dest = &g_old_vram_offsets[0];
+    // for(unsigned i=0; i<ELEMENTS(points); i++) {
 
-        // Project to 2D. z88dk generated code speed is
-        // greatly improved by inlining everything.
-        int wxnew = points[i][0]-mcos;
-        int x = 128 + ((points[i][1]+msin)/wxnew);
-        int y = 96 - (points[i][2]/wxnew);
-        if (y<0 || y>191) {
-            *dest++ = 0x00;
-            *dest++ = 0x40;
-            *dest++ = 0x80;
-            continue;
-        }
+    //     // Project to 2D. z88dk generated code speed is
+    //     // greatly improved by inlining everything.
+    //     int wxnew = points[i][0]-mcos;
+    //     int x = 128 + ((points[i][1]+msin)/wxnew);
+    //     int y = 96 - (points[i][2]/wxnew);
+    //     if (y<0 || y>191) {
+    //         *dest++ = 0x00;
+    //         *dest++ = 0x40;
+    //         *dest++ = 0x80;
+    //         continue;
+    //     }
 
-        // Set new pixel
-        uchar *offset = zx_py2saddr(y) + (x>>3);
-        uchar mask = 128 >> (x&7);
-        *offset |= mask;
+    //     // Set new pixel
+    //     uchar *offset = zx_py2saddr(y) + (x>>3);
+    //     uchar mask = 128 >> (x&7);
+    //     *offset |= mask;
 
-        // Remember new pixel to be able to clear it in the next frame
-        *dest++ = ((unsigned)offset) & 0xFF;
-        *dest++ = (((unsigned)offset) & 0xFF00) >> 8;
-        *dest++ = mask;
-    }
+    //     // Remember new pixel to be able to clear it in the next frame
+    //     *dest++ = ((unsigned)offset) & 0xFF;
+    //     *dest++ = (((unsigned)offset) & 0xFF00) >> 8;
+    //     *dest++ = mask;
+    // }
 }
 
 main()
