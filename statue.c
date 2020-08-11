@@ -107,7 +107,7 @@ main()
         if (0xF == (frames & 0xF)) {
             gotoxy(0, 3);
             printInk(3);
-            printf("[-] %3.1f FPS\n", ((float)frames)/(((float)en-st)/50.0));
+            printf("[-] %3.1f FPS\n", ((float)frames)/(((float)en-st)/CLOCKS_PER_SEC));
 	}
     }
 }
