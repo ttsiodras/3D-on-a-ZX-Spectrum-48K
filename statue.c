@@ -41,6 +41,9 @@ void drawPoints(int angle)
     push af
     ld b, 153
     ld hl, _g_old_vram_offsets
+    ; exx
+    ; ld hl, _points
+    ; exx
 loop_point:
     ld e, (hl)
     inc hl
@@ -52,8 +55,12 @@ loop_point:
     ld c, a
     ld a, (de)
     and c
-    ld (de), a
-    djnz loop_point
+    ld (de), a ; Clear pixel
+
+    ; OK, now to set the new pixel
+    ; exx ; hl now points to the ... points
+    dec b
+    jnz loop_point
     pop af
     pop hl
     pop de
