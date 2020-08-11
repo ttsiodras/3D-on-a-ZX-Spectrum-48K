@@ -39,6 +39,11 @@ thus leading to the simplest possible equations:
 No multiplications, no shifts; just two divisions, and a 
 few additions/subtractions.
 
+But that was not the end - if one is to reminisce, one must go **all the way**.
+So after 4 decades, I re-wrote Z80 assembly - and [made much better use](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/master/statue.c#L46) of the Z80 registers [than any C compiler can](https://retrocomputing.stackexchange.com/questions/6095/).
+
+The result? Almost a 2x speedup, reaching the phenomenal speed of 9.5 frames per sec :-)
+
 # Pre-calculating
 
 I was also curious about precalculating the entire paths and the
@@ -46,15 +51,13 @@ screen memory writes - you can see that code in the
 [precompute](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/tree/precompute)
 branch.
 
-**The end result there**: it's almost twice as fast *(since all the hard work is
-done in the precalculating stage)*. In addition, since I had all the time
-in the world to precompute, I used the full equations ([rotating the
-statue and 3D projecting](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L42)):
+**The end result?**: Well, it's not faster than my inline Z80 assembly version.
+But to be fair, since I had all the time in the world to precompute,
+I used the full equations ([rotating the statue and 3D projecting](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L42)):
 
 <center>
 <img src="https://raw.githubusercontent.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/precompute/contrib/linear_algebra.png">
 </center>
-
 
 To top it all off, I also precomputed the resulting video RAM locations
 and pixel offsets, leaving almost nothing for the
