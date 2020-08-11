@@ -25,32 +25,66 @@ void cls()
 // 3D projection - make a diagram or read any 3D graphics book.
 ///////////////////////////////////////////////////////////////
 
-void drawPoints(int angle)
-{
+unsigned char g_old_vram_offsets[3*ELEMENTS(points)];
+int msin;
+int mcos;
+
 #define SE (256+MAXX/16)
 
-    static int old_xx[ELEMENTS(points)];
-    static int old_yy[ELEMENTS(points)];
-
-    int msin = sincos[angle].si;
-    int mcos = sincos[angle].co;
+void drawPoints(int angle)
+{
+    uchar *dest;
+#asm
+    push bc
+    push de
+    push hl
+    push af
+    ld b, 153
+    ld hl, _g_old_vram_offsets
+loop_point:
+    ld e, (hl)
+    inc hl
+    ld d, (hl) ; DE is now pointing to old pixel's offset
+    inc hl
+    ld a, (hl) ; A is now the old pixel's mask (e.g. 64)
+    inc hl
+    xor 255
+    ld c, a
+    ld a, (de)
+    and c
+    ld (de), a
+    djnz loop_point
+    pop af
+    pop hl
+    pop de
+    pop bc
+#endasm
+    dest = &g_old_vram_offsets[0];
+    msin = sincos[angle].si;
+    mcos = sincos[angle].co;
     for(unsigned i=0; i<ELEMENTS(points); i++) {
-
-        // Clear old pixel
-        unplot_callee(old_xx[i], old_yy[i]);
 
         // Project to 2D. z88dk generated code speed is
         // greatly improved by inlining everything.
         int wxnew = points[i][0]-mcos;
         int x = 128 + ((points[i][1]+msin)/wxnew);
         int y = 96 - (points[i][2]/wxnew);
+        if (y<0 || y>191) {
+            *dest++ = 0x00;
+            *dest++ = 0x40;
+            *dest++ = 0x80;
+            continue;
+        }
 
         // Set new pixel
-        plot_callee(x, y);
+        uchar *offset = zx_py2saddr(y) + (x>>3);
+        uchar mask = 128 >> (x&7);
+        *offset |= mask;
 
         // Remember new pixel to be able to clear it in the next frame
-        old_xx[i] = x;
-        old_yy[i] = y;
+        *dest++ = ((unsigned)offset) & 0xFF;
+        *dest++ = (((unsigned)offset) & 0xFF00) >> 8;
+        *dest++ = mask;
     }
 }
 
