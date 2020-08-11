@@ -28,12 +28,17 @@ void cls()
 unsigned char g_old_vram_offsets[3*ELEMENTS(points)];
 int msin;
 int mcos;
+int scratch;
+int new_x;
+int new_y;
 
 #define SE (256+MAXX/16)
 
 void drawPoints(int angle)
 {
     uchar *dest;
+    msin = sincos[angle].si;
+    mcos = sincos[angle].co;
 #asm
     push bc
     push de
@@ -41,9 +46,10 @@ void drawPoints(int angle)
     push af
     ld b, 153
     ld hl, _g_old_vram_offsets
-    ; exx
-    ; ld hl, _points
-    ; exx
+    exx
+    ld hl, _points
+    ld bc, (_mcos)
+    exx
 loop_point:
     ld e, (hl)
     inc hl
@@ -58,7 +64,43 @@ loop_point:
     ld (de), a ; Clear pixel
 
     ; OK, now to set the new pixel
-    ; exx ; hl now points to the ... points
+    exx ; hl now points to the ... points
+    ld e, (hl)
+    inc hl
+    ld d, (hl) ; de has points[i][0]
+    ex de, hl ; hl has points[i][0], de has &points[i][1]
+    or a ; clear carry
+    sbc hl, bc ; hl is now points[i][0] - mcos = wxnew
+    ex de, hl ; hl has &points[i][1], de has wxnew
+
+    push bc ; save bc (mcos)
+    push de ; save de (wxnew)
+    ld bc, (_msin)
+    ld e, (hl)
+    inc hl
+    ld d, (hl) ; de has points[i][1]
+    inc hl     ; hl has &points[i][2]
+    ld (_scratch), hl
+    ld hl, de  ; hl has points[i][1]
+    add hl, bc ; hl = points[i][1] + msin
+    pop de     ; de = wxnew
+    push de    ; save wxnew in stack, we will need it again
+    call l_div ; hl = hl/de
+    ld de, 128
+    adc hl, de
+    ld (_new_x), hl
+    pop de ; de is wxnew again
+
+    ld hl, (_scratch)
+
+
+
+
+
+    pop de ; de was wxnew again
+    pop bc ; bc is now mcos again
+
+    exx ; back to normal register set
     dec b
     jnz loop_point
     pop af
@@ -67,8 +109,6 @@ loop_point:
     pop bc
 #endasm
     dest = &g_old_vram_offsets[0];
-    msin = sincos[angle].si;
-    mcos = sincos[angle].co;
     for(unsigned i=0; i<ELEMENTS(points); i++) {
 
         // Project to 2D. z88dk generated code speed is
