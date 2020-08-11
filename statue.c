@@ -13,7 +13,7 @@
 #define printPaper(k)        printf("\x11%c", '0'+(k))
 #define printAt(row, col)    printf("\x16%c%c", (col)+1, (row)+1)
 
-#define TOTAL_FRAMES 36
+#define TOTAL_FRAMES 72
 #define TOTAL_POINTS (sizeof(points)/sizeof(points[0]))
 
 void cls()
@@ -22,10 +22,7 @@ void cls()
     gotoxy(0,0);
 }
 
-struct {
-    unsigned char *addr;
-    unsigned char mask;
-} precomputed[TOTAL_FRAMES][TOTAL_POINTS];
+unsigned precomputed[TOTAL_FRAMES][TOTAL_POINTS];
 
 ///////////////////////////////////////////////////////////////
 // 3D projection.
@@ -66,20 +63,26 @@ void precomputePoints(int angle)
         int x = WIDTH/2L + (25L*wynew*(SE-SC)/(SE-wxnew))/256;
         int y = HEIGHT/2L + (25L*wz*(SE-SC)/(SE-wxnew))/256;
 
-        precomputed[angle][pt].addr = zx_py2saddr(y) + (x>>3);
-        precomputed[angle][pt].mask = 128 >> (x&7);
+        unsigned offset = zx_py2saddr(y) + (x>>3) - 0x4000;
+        precomputed[angle][pt] = (offset << 3) | (x&7);
     }
 }
 
 void drawPoints(int angle, int old_angle)
 {
     for(unsigned pt=0; pt<TOTAL_POINTS; pt++) {
+
         // Clear old pixel
-        
-        *precomputed[old_angle][pt].addr &= ~precomputed[old_angle][pt].mask;
+        unsigned char *pixel = (unsigned char*)0x4000;
+        pixel += ((precomputed[old_angle][pt] & 0xFFF8) >> 3);
+        unsigned char mask = 128 >> (precomputed[old_angle][pt] & 7);
+        *pixel &= ~mask;
 
         // Set new pixel
-        *precomputed[angle][pt].addr |= precomputed[angle][pt].mask;
+        pixel = (unsigned char*)0x4000;
+        pixel += ((precomputed[angle][pt] & 0xFFF8) >> 3);
+        mask = 128 >> (precomputed[angle][pt] & 7);
+        *pixel |= mask;
     }
 }
 
@@ -87,7 +90,7 @@ main()
 {
     long frames = 0;
     long m = 0, st, total_clocks = 0;
-    char angle, old_angle, dangle;
+    char angle, old_angle;
 
     cls();
     zx_border(INK_BLACK);
@@ -106,17 +109,13 @@ main()
     printf("[-] Rendering...\n");
     printf("[-] Q to quit...\n");
     angle = 0;
-    dangle = 1;
     while(1) {
         st = clock();
         drawPoints(angle, old_angle);
         total_clocks += clock() - st;
         old_angle = angle;
-        angle = angle + dangle;
-        if (angle == TOTAL_FRAMES - 1)
-            dangle = -1;
-        else if (angle == 0)
-            dangle = 1;
+        if (++angle == TOTAL_FRAMES)
+            angle = 0;
         if (in_KeyPressed(qq)) {
             while (in_KeyPressed(qq));
             break;
