@@ -28,7 +28,7 @@ struct {
 } precomputed[TOTAL_FRAMES][TOTAL_POINTS];
 
 ///////////////////////////////////////////////////////////////
-// 3D projection - make a diagram or read any 3D graphics book.
+// 3D projection.
 ///////////////////////////////////////////////////////////////
 
 void precomputePoints(int angle)
@@ -43,14 +43,26 @@ void precomputePoints(int angle)
     for(unsigned pt=0; pt<TOTAL_POINTS; pt++) {
 
         // Read the statue data.
+        // They are scaled by 256 - you can think of them
+        // as fixed point data, with 8.8 accuracy.
         int wx = points[pt][0];
         int wy = points[pt][1];
         int wz = points[pt][2];
 
-        // Now that we read the X,Y,Z data, project them to 2D
+        // Rotate the statue around the Z axis
+        // Since sine and cosine are also 8.8 fixed point\
+        // (i.e. scaled by 256), to get an 8.8 result
+        // we need two things:
+        //
+        // - compute in long (8.8 x 8.8 => 16.16)
+        // - scale down by 256, to truncate the result
+        //   back into 8.8
         long wxnew = (mcos*wx - msin*wy)/256L;
         long wynew = (msin*wx + mcos*wy)/256L;
 
+        // Now that we have the final X,Y,Z data,
+        // project them to 2D.
+        // Just look at the diagram in contrib/linear_algebra.png.
         int x = WIDTH/2L + (25L*wynew*(SE-SC)/(SE-wxnew))/256;
         int y = HEIGHT/2L + (25L*wz*(SE-SC)/(SE-wxnew))/256;
 
