@@ -51,10 +51,16 @@ screen memory writes - you can see that code in the
 [precompute](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/tree/precompute)
 branch.
 
-This version runs 4 times faster (38 frames per sec). In addition,
-since I had all the time in the world to precompute, I used the
-complete equations ([for rotating the statue and 3D projecting](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L42))
-in 8.8 fixed-point arithmetic:
+<center>
+<a href="https://youtu.be/SDEPtHYshOg" target="_blank">
+<img src="contrib/speccy3d.jpg">
+</a>
+</center>
+
+As you can see in the video above, this version runs 4 times faster,
+at 40 frames per sec. It does take a couple of minutes to precompute
+everything, though. Since I had all the time in the world to precompute,
+I used the complete equations ([for rotating the statue and 3D projecting](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L42)) in 8.8 fixed-point arithmetic:
 
 <center>
 <img src="https://raw.githubusercontent.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/precompute/contrib/linear_algebra.png">
