@@ -51,17 +51,17 @@ screen memory writes - you can see that code in the
 [precompute](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/tree/precompute)
 branch.
 
-**The end result?**: Well, it's not faster than my inline Z80 assembly version.
-But to be fair, since I had all the time in the world to precompute,
-I used the full equations ([rotating the statue and 3D projecting](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L42)):
+**The end result?**: Well, after replacing the blitting loop with an assembly
+version, it runs 4 times faster (38 frames per sec). Since I had all the time
+in the world to precompute, I also used the full equations ([rotating the statue and 3D projecting](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L42)):
 
 <center>
 <img src="https://raw.githubusercontent.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/precompute/contrib/linear_algebra.png">
 </center>
 
-To top it all off, I also precomputed the resulting video RAM locations
-and pixel offsets, leaving almost nothing for the
-[final inner loop](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L85),
+The reason for the insane speed, is that I also precomputed the target pixels'
+video RAM locations and pixel offsets, leaving almost nothing for the
+[final inner loop](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L172),
 except extracting the memory access coordinates from 16 bits/pixel:
 
 - The offset within the 6K of video RAM, in the upper 13 bits
