@@ -195,9 +195,9 @@ loop_point:
     push bc
     ld a, (_new_x)
     and 7
-    jz just_128
     ld b, a
     ld a, 128
+    jz write_mask
 shift_loop:
     srl a
     djnz shift_loop
@@ -218,11 +218,7 @@ write_mask:
     pop bc
     jmp loop_closing
 
-just_128:
-    ld a, 128
-    jmp write_mask
-
-    bad_y:
+bad_y:
     pop hl ; useless but must cleanup stack
     ld hl, bc ; get &points[i+1][0] into hl
     pop bc ; bc is now mcos again
@@ -234,8 +230,6 @@ just_128:
     inc hl
     ld (hl), 0x80
     inc hl
-    jmp loop_closing
-
 
 loop_closing:
     dec b
