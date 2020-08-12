@@ -13,13 +13,13 @@ magnificent resolution of 128x64 :-)
 </a>
 </center>
 
+# The challenge
+
 So the path to even more useless tinkering was clear:
 
 **I had to make this work for my ZX Spectrum 48K! :-)**
 
-# The challenge
-
-And well, I did.
+And... I did:
 
 <center>
 <a href="https://youtu.be/Zdb0Jd97Hzw" target="_blank">
@@ -51,21 +51,24 @@ screen memory writes - you can see that code in the
 [precompute](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/tree/precompute)
 branch.
 
-**The end result?**: Well, after replacing the blitting loop with an assembly
-version, it runs 4 times faster (38 frames per sec). Since I had all the time
-in the world to precompute, I also used the full equations ([rotating the statue and 3D projecting](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L42)):
+This version runs 4 times faster (38 frames per sec). In addition,
+since I had all the time in the world to precompute, I used the
+complete equations ([for rotating the statue and 3D projecting](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L42))
+in 8.8 fixed-point arithmetic:
 
 <center>
 <img src="https://raw.githubusercontent.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/precompute/contrib/linear_algebra.png">
 </center>
 
-The reason for the insane speed, is that I also precomputed the target pixels'
+The reason for the insane speed, is that I precompute the target pixels'
 video RAM locations and pixel offsets, leaving almost nothing for the
 [final inner loop](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L172),
 except extracting the memory access coordinates from 16 bits/pixel:
 
 - The offset within the 6K of video RAM, in the upper 13 bits
 - The pixel (0-7) within that byte, in the lower 3 bits
+
+It's also worth noting that the [inline assembly version of the "blitter"](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L91) is 3.5 times faster than [the C version](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L168). Since these are just reads, shifts and writes, I confess I did not expect to see that much of a difference... But clearly, C compilers for the Z80 need all the help they can get :-)
 
 # Next steps
 
