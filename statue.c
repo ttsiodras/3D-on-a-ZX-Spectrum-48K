@@ -76,6 +76,95 @@ void precomputePoints(int angle)
 // Clear previous frames points, and draw new frame's points,
 // using the precomputed video RAM offsets.
 //////////////////////////////////////////////////////////////
+//
+// The inline assembly version is 4 times faster!
+//
+#ifndef IN_C
+
+unsigned *old_data;
+unsigned *new_data;
+
+void drawPoints(int angle, int old_angle)
+{
+    old_data = &precomputed[old_angle][0];
+    new_data = &precomputed[angle][0];
+#asm
+    ld hl, (_old_data)
+    ld b, 153 ; TOTAL_POINTS
+    exx
+    ld hl, (_new_data)
+    exx
+
+pixel_loop:
+
+clear_old:
+    ld e, (hl)
+    inc hl
+    ld d, (hl)
+    inc hl
+    ld a, e
+    srl d
+    rr e
+    srl d
+    rr e
+    srl d
+    rr e
+    push hl
+    ld hl, 0x4000
+    add hl, de
+    and 7
+    push bc
+    ld b, a
+    ld a, 128
+    jz write_mask
+make_mask:
+    srl a
+    djnz make_mask
+write_mask:
+    xor 255
+    and (hl)
+    ld (hl), a
+    pop bc
+    pop hl
+
+    exx
+
+set_new:
+    ld e, (hl)
+    inc hl
+    ld d, (hl)
+    inc hl
+    ld a, e
+    srl d
+    rr e
+    srl d
+    rr e
+    srl d
+    rr e
+    push hl
+    ld hl, 0x4000
+    add hl, de
+    and 7
+    push bc
+    ld b, a
+    ld a, 128
+    jz write_mask2
+make_mask2:
+    srl a
+    djnz make_mask2
+write_mask2:
+    or (hl)
+    ld (hl), a
+    pop bc
+    pop hl
+
+    exx
+    djnz pixel_loop
+#endasm
+}
+
+#else
+
 void drawPoints(int angle, int old_angle)
 {
     unsigned *old_data = &precomputed[old_angle][0];
@@ -95,6 +184,7 @@ void drawPoints(int angle, int old_angle)
         *pixel |= mask;
     }
 }
+#endif
 
 main()
 {
