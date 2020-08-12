@@ -73,5 +73,5 @@ It's also worth noting that the [inline assembly version of the "blitter"](https
 # Next steps
 
 Now all I need to do is wait for my retirement... so I can use
-my electroncis knowledge to revive my Speccy, and test this code
+my electronics knowledge to revive my Speccy, and test this code
 on the real thing, not just on the Free Unix Spectrum Emulator :-)
