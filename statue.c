@@ -33,7 +33,7 @@ unsigned precomputed[TOTAL_FRAMES][TOTAL_POINTS];
 void precomputePoints(int angle)
 {
 #define SE (25L*256L + MAXX)
-#define SC (20L*256L + MAXX)
+#define SC (17L*256L + MAXX)
 #define WIDTH 256L
 #define HEIGHT 192L
 
@@ -64,11 +64,15 @@ void precomputePoints(int angle)
         int x = WIDTH/2L + (25L*wynew*(SE-SC)/(SE-wxnew))/256;
         int y = HEIGHT/2L + (25L*wz*(SE-SC)/(SE-wxnew))/256;
 
-        // Store the final memory access coordinates in 16 bits/pixel:
-        // - The offset within the 6K of video RAM, in the upper 13 bits
-        // - The pixel (0-7) within that byte, in the lower 3 bits
-        unsigned offset = zx_py2saddr(y) + (x>>3) - 0x4000;
-        precomputed[angle][pt] = (offset << 3) | (x&7);
+        if (y>=0 && y<192) {
+            // Store the final memory access coordinates in 16 bits/pixel:
+            // - The offset within the 6K of video RAM, in the upper 13 bits
+            // - The pixel (0-7) within that byte, in the lower 3 bits
+            unsigned offset = zx_py2saddr(y) + (x>>3) - 0x4000;
+            precomputed[angle][pt] = (offset << 3) | (x&7);
+        } else {
+            precomputed[angle][pt] = 0x0;
+        }
     }
 }
 
@@ -135,6 +139,9 @@ set_new:
     ld d, (hl)
     inc hl
     ld a, e
+    or d
+    jz not_drawn
+    ld a, e
     srl d
     rr e
     srl d
@@ -157,7 +164,7 @@ write_mask2:
     ld (hl), a
     pop bc
     pop hl
-
+not_drawn:
     exx
     djnz pixel_loop
 #endasm
@@ -199,15 +206,16 @@ main()
     printPaper(0);
     printInk(7);
     uint qq = in_LookupKey('q');
-    printf("[-] Precomputing for %d points\n", TOTAL_POINTS);
+    gotoxy(0, 6);
+    printf("[-] %d points\n", TOTAL_POINTS);
     // Precompute the video RAM offsets and pixel coordinate
     // for each one of the rotation angles of the statue
     for(angle=0; angle<TOTAL_FRAMES; angle++) {
-        gotoxy(0, 1);
+        gotoxy(0, 7);
         printf("[-] Frame %d/%d...\n", (int) angle, TOTAL_FRAMES);
         precomputePoints(angle);
     }
-    gotoxy(0, 1);
+    gotoxy(0, 7);
     printf("[-] Frame %d/%d...\n", (int) angle, TOTAL_FRAMES);
 
     // Statistics  banner on the upper left, will show FPS
@@ -227,7 +235,7 @@ main()
         }
         frames++;
         if (0xF == (frames & 0xF)) {
-            gotoxy(0, 4);
+            gotoxy(0, 10);
             printf("[-] %3.1f FPS\n", ((float)frames)/(((float)total_clocks)/CLOCKS_PER_SEC));
         }
     }
