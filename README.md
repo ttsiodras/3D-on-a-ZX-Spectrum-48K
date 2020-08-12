@@ -62,13 +62,13 @@ in 8.8 fixed-point arithmetic:
 
 The reason for the insane speed, is that I precompute the target pixels'
 video RAM locations and pixel offsets, leaving almost nothing for the
-[final inner loop](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L172),
+[final inner loop](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L179),
 except extracting the memory access coordinates from 16 bits/pixel:
 
 - The offset within the 6K of video RAM, in the upper 13 bits
 - The pixel (0-7) within that byte, in the lower 3 bits
 
-It's also worth noting that the [inline assembly version of the "blitter"](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L91) is 3.5 times faster than [the C version](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L168). Since these are just reads, shifts and writes, I confess I did not expect to see that much of a difference... But clearly, C compilers for the Z80 need all the help they can get :-)
+It's also worth noting that the [inline assembly version of the "blitter"](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L91) is 3.5 times faster than [the C version](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L175). Since these are just reads, shifts and writes, I confess I did not expect to see that much of a difference... But clearly, C compilers for the Z80 [need all the help they can get](https://retrocomputing.stackexchange.com/questions/6095/) :-)
 
 # Next steps
 
