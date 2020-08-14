@@ -22,7 +22,7 @@ So the path to even more useless tinkering was clear:
 And... I did:
 
 <center>
-<a href="https://youtu.be/Zdb0Jd97Hzw" target="_blank">
+<a href="https://youtu.be/IJQAdUcj330" target="_blank">
 <img src="contrib/speccy3d.jpg">
 </a>
 </center>
@@ -50,12 +50,12 @@ few additions/subtractions.
 
 But that was not the end - if one is to reminisce, one must go
 **all the way**. So after almost 4 decades, I re-wrote Z80
-assembly - and [made much better use](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/master/statue.c#L46)
+assembly - and [made much better use](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/master/statue.c#L58)
 of the Z80 registers [than any C compiler can](https://retrocomputing.stackexchange.com/questions/6095/).
 
 The result?
 
-Almost a 2x speedup! Reaching the phenomenal speed of 9.5 frames per sec :-)
+Almost a 2x speedup! Reaching the phenomenal speed of 10 frames per sec :-)
 
 # Pre-calculating
 

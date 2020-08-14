@@ -41,12 +41,8 @@ unsigned char *ofs[SCREEN_HEIGHT];
 int msin, mcos;
 
 // Too few registers in the Z80! I needed some scratch space
-// to hold the pointer moving through the "points" data,
-// as well as the computed screen X coordinate and the
-// computed screen offset.
-int scratch;
-int new_x, new_y;
-unsigned new_offset;
+// to hold the computed screen Y coordinate.
+int new_y;
 
 // Inline Z80 assembly! After 4 decades, I "spoke" Z80 again today :-)
 // And it was worth it - frame rate went from 5.4 to 9.4 FPS.
@@ -86,11 +82,11 @@ loop_point:
     ld a, (hl) ; A is now the old pixel's mask (e.g. 64)
     dec hl
     dec hl ; hl back to g_old_vram_offsets[pt*3], to write new values into
+    ex de, hl
     xor 255
-    ld c, a
-    ld a, (de)
-    and c
-    ld (de), a ; Clear pixel
+    and (hl)
+    ld (hl), a ; Clear pixel
+    ld hl, de
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Switch to helper register set
@@ -160,7 +156,7 @@ loop_point:
     ;
     ; x = 128 + ((old_Y+msin)/wxnew)
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ; stack = [wxnew, &old_Y, mcos]
+    ; stack = [&old_Y, wxnew, mcos]
 
     pop hl    ; hl <= &old_Y, stack = [wxnew, mcos]
     ld bc, (_msin)
@@ -175,8 +171,8 @@ loop_point:
     push bc    ; stack = [&points[i+1], mcos]
     call l_fast_divs_16_16x16 ; hl = hl/de
     ld de, 128
-    adc hl, de
-    ld (_new_x), hl
+    adc hl, de ; hl <= new_X
+    ld bc, hl  ; bc <= new_X
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Compute the screen offset
@@ -191,26 +187,25 @@ loop_point:
     add hl, hl   ; 2*new_y since we are indexing array of 16bit offsets
     ld de, hl
     ld hl, _ofs  ; base of the array
-    add hl, de   ; 
-    ld de, hl    ; screen offset = ofs[new_y]
-    ld a, (de)
-    ld l, a
-    inc de
-    ld a, (de)
-    ld h, a
+    add hl, de
+    ld e, (hl)
+    inc hl
+    ld d, (hl)
+    ld hl, de    ; screen offset = ofs[new_y]
 
     ; add x & 7
-    ld a, (_new_x)
-    ld d, 0
-    ld e, a
+    ld de, bc    ; de <= new_X
+    ld a, c      ; a <= new_X
     srl e
     srl e
-    srl e
-    add hl, de
-    ld (_new_offset), hl
+    srl e        ; e <= new_X >> 3
+    add hl, de   ; hl <= ofs[new_Y] + new_X >> 3
+    ld de, hl    ; de <= ofs[new_Y] + new_X >> 3
 
     pop hl     ; hl <= &points[i+1], stack = [mcos]
     pop bc     ; bc is now mcos again, stack is clean
+    push de    ; stack = [ofs[new_Y] + new_X >> 3]
+    push af    ; stack = [new_X, ofs[new_Y] + new_X >> 3]
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Switch back to normal register set
@@ -221,39 +216,34 @@ loop_point:
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Store the offset and mask for the new pixel
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ld de, (_new_offset)
-    ld (hl), e
+    pop af      ; a = new_X
+    pop de      ; de = ofs[new_Y] + new_X >> 3
+    ld (hl), e  ; store computed screen offset into g_old_vram_offsets
     inc hl
     ld (hl), d
-    inc hl ; new offset written into g_old_vram_offsets
+    inc hl      ; new offset written into g_old_vram_offsets
 
     ;;;;;;;;;;;;;;;;;;
     ; Compute the mask
     ;;;;;;;;;;;;;;;;;;
-    push bc
-    ld a, (_new_x)
-    and 7
+    push bc     ; store the counter of the 153 points
+    and 7       ; new_X & 7
     ld b, a
     ld a, 128
     jz write_mask
 shift_loop:
-    srl a
+    srl a       ; 128 >> (new_X & 7)
     djnz shift_loop
 
 write_mask:
-    ld (hl), a
+    ld (hl), a  ; store the mask into g_old_vram_offsets
+    inc hl      ; move pointer to next slot of g_old_vram_offsets
     push hl
-    dec hl
-    dec hl
-    ld e, (hl)
-    inc hl
-    ld d, (hl)
-    ld hl, de
+    ld hl, de   ; Write new pixel to screen!
     or (hl)
     ld (hl), a
-    pop hl
-    inc hl
-    pop bc
+    pop hl      ; hl <= g_old_vram_offsets, new slot
+    pop bc      ; bc <= counter of 153 points
     jmp loop_closing
 
 bad_y:
@@ -268,12 +258,10 @@ bad_y:
         ; so hl  back to g_old_vram_offsets
         ; write magic value that signifies BAD PIXEL
 
-    ld (hl), 0x00
-    inc hl
-    ld (hl), 0x40
-    inc hl
-    ld (hl), 0x80
-    inc hl
+    inc hl         ; no need to write any offset,
+    inc hl         ; since...
+    ld (hl), 0x00  ; When we NOT 0 and get 0xFF in the pixel clear logic,
+    inc hl         ; we will AND with it, leaving the original value untouched!
 
 loop_closing:
     dec b
@@ -313,7 +301,7 @@ main()
 
     for(i=0; i<ELEMENTS(points); i++) {
         int help;
-        points[i][0] /= 18;
+        points[i][0] /= 14;
         points[i][0] = SE-points[i][0];
         points[i][1] /= 9;
         points[i][1] <<= 6;
@@ -357,7 +345,7 @@ main()
         if (0xF == (frames & 0xF)) {
             gotoxy(0, 3);
             printInk(3);
-            printf("[-] %3.1f FPS\n", ((float)frames)/(((float)total_clocks)/CLOCKS_PER_SEC));
+            printf("[-] %3.1f FPS \n", ((float)frames)/(((float)total_clocks)/CLOCKS_PER_SEC));
 	}
     }
 }
