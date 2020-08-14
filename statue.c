@@ -45,7 +45,7 @@ int msin, mcos;
 // as well as the computed screen X coordinate and the
 // computed screen offset.
 int scratch;
-int new_x;
+int new_x, new_y;
 unsigned new_offset;
 
 // Inline Z80 assembly! After 4 decades, I "spoke" Z80 again today :-)
@@ -99,62 +99,53 @@ loop_point:
     exx ; hl now set to &points[i][0]
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ; Compute and set the new pixel
+    ;
+    ; Compute and set the new pixel via...
+    ;
+    ; wxnew = old_X-mcos
+    ; y = 96 - (old_Z/wxnew)
+    ; x = 128 + ((old_Y+msin)/wxnew)
+    ;
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; First, compute the common dividend (wxnew)
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     ld e, (hl)
     inc hl
-    ld d, (hl) ; de has points[i][0], i.e. X
+    ld d, (hl) ; de has old_X
     inc hl
-    ex de, hl ; hl has points[i][0], de has &points[i][1]
+    ex de, hl ; hl has old_X, de has &old_Z
     or a ; clear carry
-    sbc hl, bc ; hl is now points[i][0] - mcos = wxnew
-    ex de, hl ; hl has &points[i][1], de has wxnew
+    sbc hl, bc ; hl is now old_X-mcos => wxnew
+    ex de, hl ; hl has &old_Z, de has wxnew
+    push bc ; stack = [mcos]
+    push de ; stack = [wxnew, mcos]
 
-    ;;;;;;;;;;;;;;;;;;;;
-    ; Computing screen X
-    ;;;;;;;;;;;;;;;;;;;;
-    push bc ; save bc (mcos)
-    push de ; save de (wxnew)
-    ld bc, (_msin)
-    ld e, (hl)
-    inc hl
-    ld d, (hl) ; de has points[i][1], i.e. Y
-    inc hl     ; hl has &points[i][2]
-    ld (_scratch), hl
-    ld hl, de  ; hl has points[i][1], i.e. Y
-    add hl, bc ; hl = points[i][1] + msin
-    pop de     ; de = wxnew
-    push de    ; save wxnew in stack, we will need it again
-    call l_fast_divs_16_16x16 ; hl = hl/de
-    ld de, 128
-    adc hl, de
-    ld (_new_x), hl
-
-    ;;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;;;;;;;;
     ; Computing screen Y
-    ;;;;;;;;;;;;;;;;;;;;
-    ld hl, (_scratch) ;  &points[i][2]
+    ;;;;;;;;;;;;;;;;;;;;;;
+
     ld e, (hl)
     inc hl
-    ld d, (hl) ; de has points[i][2], i.e. Z
-    inc hl     ; hl has &points[i+1][0]
-    ex de, hl  ; de has &points[i+1][0], hl has points[i][2]
-    ld bc, de  ; save &points[i+1][0] into bc
-    pop de ; de is wxnew again
-    push bc
-    call l_fast_divs_16_16x16 ; hl =  points[i][2] / wxnew
-    pop bc
-    ld de, hl  ; de =  points[i][2] / wxnew
+    ld d, (hl) ; de <= old_Z
+    inc hl     ; hl <= &old_Y
+    ld bc, hl  ; bc <= &old_Y
+    ld hl, de  ; hl <= old_Z
+    pop de     ; de <= wxnew, stack = [mcos]
+    push de    ; stack = [wxnew, mcos]
+    push bc    ; stack has [&old_Y, wxnew, mcos]
+    call l_fast_divs_16_16x16 ; hl <= old_Z / wxnew
+    ld de, hl  ; de = old_Z / wxnew
     ld hl, 96
     or a ; clear carry
-    sbc hl, de
+    sbc hl, de ; hl = 96 - (old_Z/wxnew), stack = [&old_Y, wxnew, mcos]
+    ld (_new_y), hl    ; stack = [&old_Y, wxnew, mcos]
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ; Check if Y is within bounds
+    ; Check if new_Y is within bounds
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    push hl
+    ; stack = [&old_Y, wxnew, mcos]
+
     ld a, h
     and 0x80 ; negative
     jnz bad_y
@@ -163,19 +154,45 @@ loop_point:
     sbc hl, de ; larger than 191
     jnc bad_y
 
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ; All good, compute the screen offset
-    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; All good, compute the new_X
+    ; Remember, formula is...
+    ;
+    ; x = 128 + ((old_Y+msin)/wxnew)
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; stack = [wxnew, &old_Y, mcos]
 
-    pop hl ; hl is new_y
+    pop hl    ; hl <= &old_Y, stack = [wxnew, mcos]
+    ld bc, (_msin)
+    ld e, (hl)
+    inc hl
+    ld d, (hl) ; de <= old_Y
+    inc hl     ; hl <= &points[i+1]
+    ex de, hl  ; hl <= old_Y, de <= &points[i+1]
+    add hl, bc ; hl <= old_Y + msin
+    ld bc, de  ; bc <= &points[i+1]
+    pop de     ; de <= wxnew, stack = [mcos]
+    push bc    ; stack = [&points[i+1], mcos]
+    call l_fast_divs_16_16x16 ; hl = hl/de
+    ld de, 128
+    adc hl, de
+    ld (_new_x), hl
 
-    ; call zx_py2saddr
-    ; nope, use the lookup table
-    add hl, hl
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    ; Compute the screen offset
+    ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+    ; stack = [&points[i+1], mcos]
+
+    ld hl, (_new_y)
+
+    ; I used to call zx_py2saddr here
+    ; but a lookup table is 10 per cent faster
+    add hl, hl   ; 2*new_y since we are indexing array of 16bit offsets
     ld de, hl
-    ld hl, _ofs
-    add hl, de
-    ld de, hl
+    ld hl, _ofs  ; base of the array
+    add hl, de   ; 
+    ld de, hl    ; screen offset = ofs[new_y]
     ld a, (de)
     ld l, a
     inc de
@@ -191,8 +208,9 @@ loop_point:
     srl e
     add hl, de
     ld (_new_offset), hl
-    ld hl, bc ; get &points[i+1][0] into hl
-    pop bc ; bc is now mcos again
+
+    pop hl     ; hl <= &points[i+1], stack = [mcos]
+    pop bc     ; bc is now mcos again, stack is clean
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Switch back to normal register set
@@ -239,11 +257,17 @@ write_mask:
     jmp loop_closing
 
 bad_y:
-    pop hl ; useless but must cleanup stack
-    ld hl, bc ; get &points[i+1][0] into hl
-    pop bc ; bc is now mcos again
+    ; stack = [&old_Y, wxnew, mcos]
+    pop hl ; hl <= &old_Y, stack = [wxnew, mcos]
+    pop bc ; useless popping of wxnew, stack = [mcos]
+    pop bc ; bc is now mcos again, stack is empty
+    inc hl
+    inc hl ; hl now points to &points[i+1]
+
     exx ; back to normal register set
         ; so hl  back to g_old_vram_offsets
+        ; write magic value that signifies BAD PIXEL
+
     ld (hl), 0x00
     inc hl
     ld (hl), 0x40
@@ -288,12 +312,25 @@ main()
     #define SE (256+MAXX/16)
 
     for(i=0; i<ELEMENTS(points); i++) {
+        int help;
         points[i][0] /= 18;
         points[i][0] = SE-points[i][0];
         points[i][1] /= 9;
         points[i][1] <<= 6;
         points[i][2] /= 9;
         points[i][2] <<= 6;
+
+        // Another speed improvement comes from this:
+        help = points[i][1];
+        points[i][1] = points[i][2];
+        points[i][2] = help;
+        // Orientation in points array is now X, Z, Y.
+        // This allows us to compute wxnew and new_Y first.
+        // We can then forgo the computation of the new_X,
+        // if the new_Y is out of bounds.
+        //
+        // Early abort=>speedup!
+        // 9.9 fps, the barrier of 10 is so close! :-)
     }
     for(i=0; i<ELEMENTS(sincos); i++) {
         sincos[i].si /= 3;
