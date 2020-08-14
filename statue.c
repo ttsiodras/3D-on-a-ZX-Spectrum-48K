@@ -10,6 +10,8 @@
 #define printPaper(k)        printf("\x11%c", '0'+(k))
 #define ELEMENTS(x)          (sizeof(x)/sizeof(x[0]))
 
+#define SCREEN_HEIGHT 192
+
 // The angle of rotation of the eye around the Z-axis.
 // Goes from 0 up to 71 for a full circle
 // (see lookup table inside sincos.h).
@@ -17,7 +19,7 @@ static int angle = 0;
 
 void cls()
 {
-    memset((char *)16384, 0, 256*192/8);
+    memset((char *)16384, 0, 256*SCREEN_HEIGHT/8);
     gotoxy(0,0);
 }
 
@@ -153,7 +155,7 @@ loop_point:
     ld a, h
     and 0x80 ; negative
     jnz bad_y
-    ld de, 192
+    ld de, 192 ; SCREEN_HEIGHT
     or a ; clear carry
     sbc hl, de ; larger than 191
     jnc bad_y
