@@ -34,6 +34,9 @@ void cls()
 // The buffer keeping the old frame's screen offset/pixel mask
 unsigned char g_old_vram_offsets[3*ELEMENTS(points)];
 
+// Lookup table for Speccy's insane screen offsets
+unsigned char *ofs[SCREEN_HEIGHT];
+
 // The scaled sin/cos for the angle being rendered in this frame
 int msin, mcos;
 
@@ -165,9 +168,24 @@ loop_point:
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     pop hl ; hl is new_y
-    call zx_py2saddr
+
+    ; call zx_py2saddr
+    ; nope, use the lookup table
+    add hl, hl
+    ld de, hl
+    ld hl, _ofs
+    add hl, de
+    ld de, hl
+    ld a, (de)
+    ld l, a
+    inc de
+    ld a, (de)
+    ld h, a
+
+    ; add x & 7
     ld a, (_new_x)
-    ld e, a  ; d is already 0
+    ld d, 0
+    ld e, a
     srl e
     srl e
     srl e
@@ -247,6 +265,7 @@ main()
 {
     long frames = 0;
     long m = 0, st, en, total_clocks = 0;
+    unsigned i = 0;
 
     //////////////
     // Banner info
@@ -268,7 +287,7 @@ main()
     ///////////////////////////////////////////////////
     #define SE (256+MAXX/16)
 
-    for(unsigned i=0; i<ELEMENTS(points); i++) {
+    for(i=0; i<ELEMENTS(points); i++) {
         points[i][0] /= 18;
         points[i][0] = SE-points[i][0];
         points[i][1] /= 9;
@@ -276,11 +295,13 @@ main()
         points[i][2] /= 9;
         points[i][2] <<= 6;
     }
-    for(unsigned i=0; i<ELEMENTS(sincos); i++) {
+    for(i=0; i<ELEMENTS(sincos); i++) {
         sincos[i].si /= 3;
         sincos[i].si <<= 6;
         sincos[i].co /= 3;
     }
+    for(i=0; i<SCREEN_HEIGHT; i++)
+        ofs[i] = zx_py2saddr(i);
 
     // Q will quit.
     uint qq = in_LookupKey('q');
