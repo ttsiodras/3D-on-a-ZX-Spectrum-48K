@@ -12,7 +12,7 @@
 # You can now use the cross compiler - just put these in your
 # enviroment (e.g. in your .profile):
 #
-# export PATH=$HOME/Github/z88dk/bin
+# export PATH=$HOME/Github/z88dk/bin:$PATH
 # export ZCCCFG=$HOME/Github/z88dk/lib/config
 
 EXE:=statue.tap
