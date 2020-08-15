@@ -19,7 +19,7 @@ static int angle = 0;
 
 void cls()
 {
-    memset((char *)16384, 0, 256*SCREEN_HEIGHT/8);
+    memset((char *)16384, 0, 256U*SCREEN_HEIGHT/8);
     gotoxy(0,0);
 }
 
@@ -381,4 +381,5 @@ main()
             printf("[-] %3.1f FPS \n", ((float)frames)/(((float)total_clocks)/CLOCKS_PER_SEC));
 	}
     }
+    return 0;
 }
