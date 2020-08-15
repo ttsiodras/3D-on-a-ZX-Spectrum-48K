@@ -50,7 +50,7 @@ few additions/subtractions.
 
 But that was not the end - if one is to reminisce, one must go
 **all the way**. So after almost 4 decades, I re-wrote Z80
-assembly - and [made much better use](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/master/statue.c#L58)
+assembly - and [made much better use](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/master/statue.c#L88)
 of the Z80 registers [than any C compiler can](https://retrocomputing.stackexchange.com/questions/6095/).
 
 The result?

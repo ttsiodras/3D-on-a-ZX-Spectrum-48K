@@ -54,6 +54,35 @@ int new_y;
 //
 // ...ergo, the need for manually written ASM.
 // Quite the puzzle, this was - but I pulled it off :-)
+//
+// Here's the original C code, for reference:
+//
+// void drawPoints_in_C(int angle)
+// {
+//     static int old_xx[ELEMENTS(points)];
+//     static int old_yy[ELEMENTS(points)];
+// 
+//     int msin = sincos[angle].si;
+//     int mcos = sincos[angle].co;
+//     for(unsigned i=0; i<ELEMENTS(points); i++) {
+// 
+//         // Clear old pixel
+//         unplot_callee(old_xx[i], old_yy[i]);
+// 
+//         // Project to 2D. z88dk generated code speed is
+//         // greatly improved by inlining everything.
+//         int wxnew = points[i][0]-mcos;
+//         int x = 128 + ((points[i][2]+msin)/wxnew);
+//         int y = 96 - (points[i][1]/wxnew);
+// 
+//         // Set new pixel
+//         plot_callee(x, y);
+// 
+//         // Remember new pixel to be able to clear it in the next frame
+//         old_xx[i] = x;
+//         old_yy[i] = y;
+//     }
+// }
 
 void drawPoints(int angle)
 {
