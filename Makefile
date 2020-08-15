@@ -16,6 +16,7 @@
 # export ZCCCFG=$HOME/Github/z88dk/lib/config
 
 EXE:=statue.tap
+EXE_C:=statue_C.tap
 
 Q=@
 ifeq ($V,1)
@@ -30,19 +31,21 @@ ${EXE}:	statue.c $(wildcard *.h)
 	${Q}rm -f statue *.bin zcc_opt.def
 	${Q}echo "[LD] " $@
 
+${EXE_C}:	statue.c $(wildcard *.h)
+	${Q}echo "[CC] " $<
+	${Q}zcc +zx -lndos -create-app -DIN_C -O2 --opt-code-speed=all -Cc-unsigned -o statue_C $< -lm
+	${Q}rm -f statue_C *.bin zcc_opt.def
+	${Q}echo "[LD] " $@
+
 run:	${EXE}
 	fuse $<
 
-runfast:	${EXE}
-	fuse --speed 250 $<
+run_C:	${EXE_C}
+	fuse $<
 
 clean:
 	${Q}echo "[CLEAN]"
-	${Q}rm -rf ${EXE}
-
-# For pure-C builds, this takes the speed up from 5.4 to 6.0 fps.
-optimize1:
-	zcc +zx -lndos -create-app -O2 --opt-code-speed=all -Cc-unsigned -o statue statue.c -lm
+	${Q}rm -rf ${EXE} ${EXE_C} *.bin
 
 # This apparently messes up the FPS counting (i.e. the "clock()" calls).
 # It does appear to be a bit faster than "optimize1", 6.1 fps maybe.
