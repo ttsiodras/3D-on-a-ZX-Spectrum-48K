@@ -45,7 +45,7 @@ int msin, mcos;
 int new_y;
 
 // Inline Z80 assembly! After 4 decades, I "spoke" Z80 again today :-)
-// And it was worth it - frame rate went from 5.4 to 9.4 FPS.
+// And it was worth it - frame rate went from 5.4 to 10.1 FPS.
 //
 // The Z80 C compilers are nowhere near as powerful as the GCC/Clang
 // world. Read this to see why:
@@ -222,19 +222,24 @@ loop_point:
     ld d, (hl)
     ld hl, de    ; screen offset = ofs[new_y]
 
-    ; add x & 7
-    ld de, bc    ; de <= new_X
-    ld a, c      ; a <= new_X
-    srl e
-    srl e
-    srl e        ; e <= new_X >> 3
-    add hl, de   ; hl <= ofs[new_Y] + new_X >> 3
-    ld de, hl    ; de <= ofs[new_Y] + new_X >> 3
+    ; stack = [&points[i+1], mcos]
 
-    pop hl     ; hl <= &points[i+1], stack = [mcos]
-    pop bc     ; bc is now mcos again, stack is clean
-    push de    ; stack = [ofs[new_Y] + new_X >> 3]
-    push af    ; stack = [new_X, ofs[new_Y] + new_X >> 3]
+    ; add x >> 3
+    ld a, c      ; a <= new_X
+    rra          ; rra is the fastest shift in the block
+    rra          ; but it has the nasty side-effect
+    rra          ; of shifting in the carry from the left
+    and 0x1f     ; so ignore the upper 3 bits
+    add l        ; and just add the last 5 to L
+    ld l, a      ; hl <= ofs[new_Y] + new_X >> 3
+    ld a, c      ; a <= new_X
+    ld de, hl    ; de <= ofs[new_Y] + new_X >> 3
+    pop hl       ; hl <= &points[i+1], stack = [mcos]
+    pop bc       ; bc is now mcos again, stack is clean
+                 ; to communicate past the EXX,
+                 ; shove values in the stack:
+    push de      ; stack = [ofs[new_Y] + new_X >> 3]
+    push af      ; stack = [new_X, ofs[new_Y] + new_X >> 3]
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Switch back to normal register set
@@ -261,7 +266,7 @@ loop_point:
     ld a, 128
     jz write_mask
 shift_loop:
-    srl a       ; 128 >> (new_X & 7)
+    rra         ; 128 >> (new_X & 7)
     djnz shift_loop
 
 write_mask:
@@ -347,7 +352,6 @@ main()
         // if the new_Y is out of bounds.
         //
         // Early abort=>speedup!
-        // 9.9 fps, the barrier of 10 is so close! :-)
     }
     for(i=0; i<ELEMENTS(sincos); i++) {
         sincos[i].si /= 3;
