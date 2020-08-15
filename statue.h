@@ -164,7 +164,7 @@ const float points[][3] = {
 
 #else // FLOAT
 
-const int points[][3] = {
+int points[][3] = {
     {1176, 1040, -4484},
     {1576, 754, -2742},
     {1685, 404, -4425},
