@@ -65,8 +65,8 @@ screen memory writes - you can see that code in the
 branch.
 
 <center>
-<a href="https://youtu.be/SDEPtHYshOg" target="_blank">
-<img src="contrib/speccy3d.jpg">
+<a href="https://youtu.be/_-eZoSKz0HM" target="_blank">
+<img src="contrib/speccy_precomputed.jpg">
 </a>
 </center>
 
