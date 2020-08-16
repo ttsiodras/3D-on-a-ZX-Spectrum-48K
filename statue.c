@@ -108,9 +108,9 @@ loop_point:
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ld e, (hl)
     inc hl
-    ld d, (hl) ; DE is now pointing to old pixel's offset
+    ld d, (hl) ; DE is now pointing to old pixel offset
     inc hl
-    ld a, (hl) ; A is now the old pixel's mask (e.g. 64)
+    ld a, (hl) ; A is now the old pixel mask (e.g. 64)
     dec hl
     dec hl ; hl back to g_old_vram_offsets[pt*3], to write new values into
     ex de, hl

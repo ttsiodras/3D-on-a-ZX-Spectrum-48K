@@ -49,5 +49,8 @@ clean:
 
 # This apparently messes up the FPS counting (i.e. the "clock()" calls).
 # It does appear to be a bit faster than "optimize1", 6.1 fps maybe.
-optimize2:
-	zcc +zx -compiler=sdcc -SO3 -lndos -create-app -O2 --opt-code-speed=all -Cc-unsigned -o statue statue.c -lmath48
+optimized_C:	statue.c $(wildcard *.h)
+	${Q}echo "[CC] " $<
+	${Q}zcc +zx -compiler=sdcc -SO3 -DIN_C -lndos -create-app -O2 --opt-code-speed=all -Cc-unsigned -o statue_C statue.c -lmath48
+	${Q}rm -f statue_C *.bin zcc_opt.def
+	${Q}echo "[LD] " $@
