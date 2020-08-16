@@ -7,11 +7,7 @@ into an ATmega328P microcontroller, implementing "points-only" 3D rendering,
 and driving an OLED display via the SPI interface...  at the
 magnificent resolution of 128x64 :-)
 
-<center>
-<a href="https://youtu.be/nsqmnkfZtSw" target="_blank">
-<img src="contrib/3DFX.jpg">
-</a>
-</center>
+[![Real-time 3D on an ATmega328P](contrib/3DFX.jpg "Real-time 3D on an ATmega328P")](https://youtu.be/nsqmnkfZtSw)
 
 # The challenge
 
@@ -21,11 +17,7 @@ So the path to even more useless tinkering was clear:
 
 And... I did:
 
-<center>
-<a href="https://youtu.be/IJQAdUcj330" target="_blank">
-<img src="contrib/speccy3d.jpg">
-</a>
-</center>
+[![Real-time 3D on a ZX Spectrum 48K](contrib/speccy3d.jpg "Real-time 3D on a ZX Spectrum 48K")](https://youtu.be/IJQAdUcj330)
 
 As you saw in the video, there's a simple Makefile driving
 the build process - so just type:
@@ -64,11 +56,7 @@ screen memory writes - you can see that code in the
 [precompute](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/tree/precompute)
 branch.
 
-<center>
-<a href="https://youtu.be/_-eZoSKz0HM" target="_blank">
-<img src="contrib/speccy_precomputed.jpg">
-</a>
-</center>
+[![Pre-calculated 3D animation on a ZX Spectrum 48K](contrib/speccy_precomputed.jpg "Pre-calculated 3D animation on a ZX Spectrum 48K")](https://youtu.be/_-eZoSKz0HM)
 
 As you can see in the video above, this version runs 4 times faster,
 at 40 frames per sec. It does take a couple of minutes to precompute
@@ -77,9 +65,7 @@ I used the complete equations
 ([for rotating the statue and 3D projecting](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L42))
 in 8.8 fixed-point arithmetic:
 
-<center>
-<img src="https://raw.githubusercontent.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/precompute/contrib/linear_algebra.png">
-</center>
+![3D Algebra](contrib/linear_algebra.png "3D Algebra")
 
 The reason for the insane speed, is that I precompute the target pixels'
 video RAM locations and pixel offsets, leaving almost nothing for the
