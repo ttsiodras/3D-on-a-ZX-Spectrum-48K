@@ -62,7 +62,7 @@ void precomputePoints(int angle)
         // project them to 2D.
         // Just look at the diagram in contrib/linear_algebra.png.
         int x = WIDTH/2L + (25L*wynew*(SE-SC)/(SE-wxnew))/256;
-        int y = HEIGHT/2L + (25L*wz*(SE-SC)/(SE-wxnew))/256;
+        int y = HEIGHT/2L - (25L*wz*(SE-SC)/(SE-wxnew))/256;
 
         if (y>=0 && y<192) {
             // Store the final memory access coordinates in 16 bits/pixel:
@@ -204,7 +204,7 @@ main()
     zx_border(INK_BLACK);
     memset((void *)22528.0, 7, 768);
     printPaper(0);
-    printInk(7);
+    printInk(3);
     uint qq = in_LookupKey('q');
     gotoxy(0, 6);
     printf("[-] %d points\n", TOTAL_POINTS);
@@ -219,7 +219,6 @@ main()
     printf("[-] Frame %d/%d...\n", (int) angle, TOTAL_FRAMES);
 
     // Statistics  banner on the upper left, will show FPS
-    printf("[-] Rendering...\n");
     printf("[-] Q to quit...\n");
     angle = 0;
     while(1) {
@@ -234,8 +233,8 @@ main()
             break;
         }
         frames++;
-        if (0xF == (frames & 0xF)) {
-            gotoxy(0, 10);
+        if (0x7F == (frames & 0x7F)) {
+            gotoxy(0, 9);
             printf("[-] %3.1f FPS\n", ((float)frames)/(((float)total_clocks)/CLOCKS_PER_SEC));
         }
     }
