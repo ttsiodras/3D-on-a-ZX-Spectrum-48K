@@ -9,24 +9,43 @@ magnificent resolution of 128x64 :-)
 
 [![Real-time 3D on an ATmega328P](contrib/3DFX.jpg "Real-time 3D on an ATmega328P")](https://youtu.be/nsqmnkfZtSw)
 
-# The challenge
+# The challenge - run it on the Speccy
 
 So the path to even more useless tinkering was clear:
 
 **I had to make this work for my ZX Spectrum 48K! :-)**
 
-And... I did:
+And as you can see in this repository... I just did:
 
 [![Real-time 3D on a ZX Spectrum 48K](contrib/speccy3d.jpg "Real-time 3D on a ZX Spectrum 48K")](https://youtu.be/IJQAdUcj330)
 
-As you saw in the video, there's a simple Makefile driving
-the build process - so just type:
+There's a simple *Makefile* driving the build process - so once
+you have `z88dk` installed, just type:
 
-    make && make run
+    make clean all run
 
-The cross-compiler used for the compilation is
-[z88dk](https://www.z88dk.org/forum/); the resulting `statue.tap`
-file is also committed *(for those that just want to quickly run this)*.
+The resulting `statue.tap` file is also committed in the repo,
+in case you just want to quickly run this in your FUSE emulator.
+
+# Compiling z88dk
+
+The cross-compiler used for the compilation is [z88dk](https://www.z88dk.org/forum/).
+If it's not packaged in your distribution, you can easily build it from source:
+
+    mkdir -p ~/Github/
+    cd ~/Github/
+    git clone https://github.com/z88dk/z88dk/
+    cd z88dk
+    git submodule init
+    git submodule update
+    ./build.sh
+
+You can now use the cross compiler - by just setting up your enviroment (e.g. in your `.profile`):
+
+    export PATH=$HOME/Github/z88dk/bin:$PATH
+    export ZCCCFG=$HOME/Github/z88dk/lib/config
+
+# On 3D projection and Z80 assembly
 
 Since the Speccy's brain is even tinier than the ATmega328P's, 
 I had to take even more liberties:  I changed the computation
@@ -41,15 +60,17 @@ No multiplications, no shifts; just two divisions, and a
 few additions/subtractions.
 
 But that was not the end - if one is to reminisce, one must go
-**all the way**. So after almost 4 decades, I re-wrote Z80
-assembly - and [made much better use](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/master/statue.c#L88)
+**all the way**!
+
+So after almost 4 decades, I re-wrote Z80 assembly - and
+[made much better use](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/master/statue.c#L88)
 of the Z80 registers [than any C compiler can](https://retrocomputing.stackexchange.com/questions/6095/).
 
 The result?
 
-Almost a 2x speedup! Reaching the phenomenal speed of 10 frames per sec :-)
+Almost a 2x speedup... Reaching the phenomenal speed of 10 frames per sec :-)
 
-# Pre-calculating
+# Pre-calculating for maximum speed
 
 I was also curious about precalculating the entire paths and the
 screen memory writes - you can see that code in the
@@ -82,8 +103,14 @@ Since these are just reads, shifts and writes, I confess I did not expect
 to see that much of a difference... But clearly, C compilers for the Z80
 [need all the help they can get](https://retrocomputing.stackexchange.com/questions/6095/) :-)
 
-# Next steps
+# Next step - the real thing
 
 Now all I need to do is wait for my retirement... so I can use
 my electronics knowledge to revive my Speccy, and test this code
 on the real thing, not just on the Free Unix Spectrum Emulator :-)
+
+Then again, maybe you, kind reader, can try this out
+on your Speccy - and tell me if it works?
+
+Cheers!  
+Thanassis.
