@@ -5,7 +5,7 @@
 
 // The original statue data.
 // Unused here; they are pre-scaled in 8.8 fixed-point below.
-const float points[][3] = {
+const float g_points[][3] = {
     {0.1312855, 0.11608299999999999, -0.5005139999999999},
     {0.1759435, 0.08417239999999998, -0.30605499999999997},
     {0.1881545, 0.045099899999999984, -0.493971},
@@ -162,9 +162,9 @@ const float points[][3] = {
 };
 #define maxx 0.2847195
 
-#else // FLOAT
+#else // if not FLOAT
 
-int points[][3] = {
+int g_points[][3] = {
     {1176, 1040, -4484},
     {1576, 754, -2742},
     {1685, 404, -4425},

@@ -6,7 +6,7 @@
 struct {
     int si;
     int co;
-} sincos[] = {
+} g_sincos[] = {
     {0,256},
     {22,255},
     {44,252},

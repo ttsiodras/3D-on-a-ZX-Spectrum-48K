@@ -27,7 +27,7 @@ all:	${EXE}
 
 ${EXE}:	statue.c $(wildcard *.h)
 	${Q}echo "[CC] " $<
-	${Q}zcc +zx -lndos -create-app -O3 -o statue $< -lm
+	${Q}zcc +zx -lndos -create-app -O3 -o statue $< -lm -m --list
 	${Q}rm -f statue *.bin zcc_opt.def
 	${Q}echo "[LD] " $@
 
@@ -38,14 +38,14 @@ ${EXE_C}:	statue.c $(wildcard *.h)
 	${Q}echo "[LD] " $@
 
 run:	${EXE}
-	fuse $<
+	fuse -g tv4x $<
 
 run_C:	${EXE_C}
-	fuse $<
+	fuse -g tv4x $<
 
 clean:
 	${Q}echo "[CLEAN]"
-	${Q}rm -rf ${EXE} ${EXE_C} *.bin
+	${Q}rm -rf ${EXE} ${EXE_C} *.bin *.map *.lis
 
 # This apparently messes up the FPS counting (i.e. the "clock()" calls).
 # It does appear to be a bit faster than "optimize1", 6.1 fps maybe.
