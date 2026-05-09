@@ -15,7 +15,7 @@ ${EXE}:	statue.c $(wildcard *.h)
 
 run:	${EXE}
 	@# fuse --speed 250 $<
-	fuse $<
+	fuse -g tv4x $<
 
 clean:
 	${Q}echo "[CLEAN]"
