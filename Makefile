@@ -25,16 +25,19 @@ endif
 
 all:	${EXE}
 
-${EXE}:	statue.c $(wildcard *.h)
+mask.bin: tables_gen.py
+	python3 $<
+
+${EXE}:	statue.c $(wildcard *h) tables.asm mask.bin
 	${Q}echo "[CC] " $<
-	${Q}zcc +zx -lndos -create-app -O3 -o statue $< -lm -m --list
-	${Q}rm -f statue *.bin zcc_opt.def
+	${Q}zcc +zx -lndos -create-app -O3 -o statue $< tables.asm -lm -m --list
+	${Q}rm -f statue statue*bin zcc_opt.def
 	${Q}echo "[LD] " $@
 
 ${EXE_C}:	statue.c $(wildcard *.h)
 	${Q}echo "[CC] " $<
 	${Q}zcc +zx -lndos -create-app -DIN_C -O2 --opt-code-speed=all -Cc-unsigned -o statue_C $< -lm
-	${Q}rm -f statue_C *.bin zcc_opt.def
+	${Q}rm -f statue_C statue*bin zcc_opt.def
 	${Q}echo "[LD] " $@
 
 run:	${EXE}
@@ -45,7 +48,7 @@ run_C:	${EXE_C}
 
 clean:
 	${Q}echo "[CLEAN]"
-	${Q}rm -rf ${EXE} ${EXE_C} *.bin *.map *.lis
+	${Q}rm -rf ${EXE} ${EXE_C} statue_*.bin *.map *.lis
 
 # This apparently messes up the FPS counting (i.e. the "clock()" calls).
 # It does appear to be a bit faster than "optimize1", 6.1 fps maybe.

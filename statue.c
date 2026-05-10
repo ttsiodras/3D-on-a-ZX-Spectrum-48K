@@ -41,23 +41,6 @@ int g_new_y;
 // ...ergo, the need for manually written ASM.
 // Quite the puzzle, this was - but I pulled it off :-)
 
-// Small lookup table to avoid this loop:
-//
-//     and 7       ; new_X & 7
-//     ld b, a
-//     ld a, 128
-//     jz write_mask
-// shift_loop:
-//     rra         ; 128 >> (new_X & 7)
-//     djnz shift_loop
-// write_mask:
-//     ...
-//
-// 2% speedup :-)
-unsigned char write_mask_table[8] = {
-    128, 64, 32, 16, 8, 4, 2, 1
-};
-
 // #define IN_C
 #ifdef IN_C
 
@@ -271,11 +254,25 @@ loop_point:
     ;;;;;;;;;;;;;;;;;;
     ; Compute the mask
     ;;;;;;;;;;;;;;;;;;
+
     push bc     ; store the counter of the 153 points
 
-    and  7
-    ld   bc, _write_mask_table
-    add  a, c 
+    ; Use a small lookup table to avoid this loop:
+    ;
+    ;     and 7       ; new_X & 7
+    ;     ld b, a
+    ;     ld a, 128
+    ;     jz write_mask
+    ; shift_loop:
+    ;     rra         ; 128 >> (new_X & 7)
+    ;     djnz shift_loop
+    ; write_mask:
+    ;     ...
+    ; 2% speedup
+
+    and  7  
+    extern _mask_table
+    ld   b, _mask_table >> 8
     ld   c, a
     ld   a, (bc)
 
