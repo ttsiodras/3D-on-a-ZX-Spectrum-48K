@@ -38,10 +38,10 @@ ${EXE_C}:	statue.c $(wildcard *.h)
 	${Q}echo "[LD] " $@
 
 run:	${EXE}
-	fuse -g tv4x $<
+	fuse -g tv3x $<
 
 run_C:	${EXE_C}
-	fuse -g tv4x $<
+	fuse -g tv3x $<
 
 clean:
 	${Q}echo "[CLEAN]"
