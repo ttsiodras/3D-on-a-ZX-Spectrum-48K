@@ -27,11 +27,11 @@ unsigned char g_old_vram_offsets[3*ELEMENTS(g_points)];
 unsigned char *g_ofs[SCREEN_HEIGHT];
 
 // Too few registers in the Z80! I needed some scratch space
-// to hold the computed screen Y coordinate.
+// to hold the computed screen Y coordinate. IX/IY are too slow!
 int g_new_y;
 
 // Inline Z80 assembly! After 4 decades, I "spoke" Z80 again today :-)
-// And it was worth it - frame rate went from 5.4 to 10.1 FPS.
+// And it was worth it - frame rate went from 5.4 to 10.5 FPS.
 //
 // The Z80 C compilers are nowhere near as powerful as the GCC/Clang
 // world. Read this to see why:
@@ -192,7 +192,7 @@ _self_modify_1:
 
     pop hl    ; hl <= &old_Y, stack = [wxnew]
 _self_modify_2:
-    ld bc, 0xDEAD
+    ld bc, 0xDEAD ; msin 
     ld e, (hl)
     inc hl
     ld d, (hl) ; de <= old_Y

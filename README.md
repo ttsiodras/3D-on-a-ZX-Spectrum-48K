@@ -71,7 +71,7 @@ of the Z80 registers [than any C compiler can](https://retrocomputing.stackexcha
 
 The result?
 
-Almost a 2x speedup... Reaching the phenomenal speed of 10 frames per sec :-)
+Almost a 2x speedup... Reaching the phenomenal speed of 10.5 frames per sec :-)
 
 # Pre-calculating for maximum speed
 
