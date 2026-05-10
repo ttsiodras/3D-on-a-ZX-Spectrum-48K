@@ -46,6 +46,11 @@ int g_new_y;
 
 void drawPoints(int angle)
 {
+    ///////////////////////////////////////////////////////////////
+    // Detailed explanation of the algorithm lives in the README.md
+    // See "For math nerds" section for details.
+    ///////////////////////////////////////////////////////////////
+
     static int old_xx[ELEMENTS(g_points)];
     static int old_yy[ELEMENTS(g_points)];
 
@@ -79,6 +84,11 @@ int g_msin, g_mcos;
 
 void drawPoints(int angle)
 {
+    ///////////////////////////////////////////////////////////////
+    // Detailed explanation of the algorithm lives in the README.md
+    // See "For math nerds" section for details.
+    ///////////////////////////////////////////////////////////////
+
     // The scaled sin/cos for the angle being rendered in this frame
     g_msin = g_sincos[angle].si;
     g_mcos = g_sincos[angle].co;
@@ -285,24 +295,6 @@ write_mask:
     ld (hl), a
     pop hl      ; hl <= g_old_vram_offsets, new slot
     pop bc      ; bc <= counter of 153 points
-    jmp loop_closing
-
-bad_y:
-    ; stack = [&old_Y, wxnew, mcos]
-    pop hl ; hl <= &old_Y, stack = [wxnew, mcos]
-    pop bc ; useless popping of wxnew, stack = [mcos]
-    pop bc ; bc is now mcos again, stack is empty
-    inc hl
-    inc hl ; hl now points to &g_points[i+1]
-
-    exx ; back to normal register set
-        ; so hl  back to g_old_vram_offsets
-        ; write magic value that signifies BAD PIXEL
-
-    inc hl         ; no need to write any offset,
-    inc hl         ; since...
-    ld (hl), 0x00  ; When we NOT 0 and get 0xFF in the pixel clear logic,
-    inc hl         ; we will AND with it, leaving the original value untouched!
 
 loop_closing:
     dec b
@@ -311,6 +303,25 @@ loop_closing:
     pop hl
     pop de
     pop bc
+    ret
+
+bad_y:
+    ; stack = [&old_Y, wxnew, mcos]
+    pop hl         ; hl <= &old_Y, stack = [wxnew, mcos]
+    pop bc         ; popping of (useless) wxnew, stack = [mcos]
+    pop bc         ; bc is now mcos again, stack is empty
+    inc hl
+    inc hl         ; hl now points to &g_points[i+1]
+
+    exx            ; back to normal register set
+                   ; so hl  back to g_old_vram_offsets
+                   ; write magic ZERO value that signifies BAD PIXEL
+
+    inc hl         ; no need to write any offset,
+    inc hl         ; since...
+    ld (hl), 0x00  ; When we NOT 0 and get 0xFF in the pixel clear logic,
+    inc hl         ; we will AND with it, leaving the original value untouched!
+    jmp loop_closing
 #endasm
 }
 
