@@ -79,8 +79,8 @@ void drawPoints(int angle)
 
 #else
 
-// The scaled sin/cos for the angle being rendered in this frame
-int g_msin, g_mcos;
+extern char self_modify_1[2];
+extern char self_modify_2[2];
 
 void drawPoints(int angle)
 {
@@ -90,8 +90,8 @@ void drawPoints(int angle)
     ///////////////////////////////////////////////////////////////
 
     // The scaled sin/cos for the angle being rendered in this frame
-    g_msin = g_sincos[angle].si;
-    g_mcos = g_sincos[angle].co;
+    *(int*) &self_modify_1[1] = g_sincos[angle].co;
+    *(int*) &self_modify_2[1] = g_sincos[angle].si;
 #asm
     extern l_fast_divs_16_16x16
     push bc
@@ -102,7 +102,6 @@ void drawPoints(int angle)
     ld hl, _g_old_vram_offsets
     exx
     ld hl, _g_points
-    ld bc, (_g_mcos)
     exx
 loop_point:
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -145,10 +144,11 @@ loop_point:
     inc hl
     ex de, hl ; hl has old_X, de has &old_Z
     or a ; clear carry
+_self_modify_1:
+    ld bc, 0xDEAD ; this gets assigned to g_mcos on every function call
     sbc hl, bc ; hl is now old_X-mcos => wxnew
     ex de, hl ; hl has &old_Z, de has wxnew
-    push bc ; stack = [mcos]
-    push de ; stack = [wxnew, mcos]
+    push de ; stack = [wxnew]
 
     ;;;;;;;;;;;;;;;;;;;;;;
     ; Computing screen Y
@@ -160,20 +160,20 @@ loop_point:
     inc hl     ; hl <= &old_Y
     ld bc, hl  ; bc <= &old_Y
     ld hl, de  ; hl <= old_Z
-    pop de     ; de <= wxnew, stack = [mcos]
-    push de    ; stack = [wxnew, mcos]
-    push bc    ; stack has [&old_Y, wxnew, mcos]
+    pop de     ; de <= wxnew, stack = []
+    push de    ; stack = [wxnew]
+    push bc    ; stack has [&old_Y, wxnew]
     call l_fast_divs_16_16x16 ; hl <= old_Z / wxnew
     ld de, hl  ; de = old_Z / wxnew
     ld hl, 96
     or a ; clear carry
-    sbc hl, de ; hl = 96 - (old_Z/wxnew), stack = [&old_Y, wxnew, mcos]
-    ld (_g_new_y), hl    ; stack = [&old_Y, wxnew, mcos]
+    sbc hl, de ; hl = 96 - (old_Z/wxnew), stack = [&old_Y, wxnew]
+    ld (_g_new_y), hl    ; stack = [&old_Y, wxnew]
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Check if g_new_Y is within bounds
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ; stack = [&old_Y, wxnew, mcos]
+    ; stack = [&old_Y, wxnew]
 
     ld a, h
     and 0x80 ; negative
@@ -188,10 +188,11 @@ loop_point:
     ;
     ; x = 128 + ((old_Y+msin)/wxnew)
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ; stack = [&old_Y, wxnew, mcos]
+    ; stack = [&old_Y, wxnew]
 
-    pop hl    ; hl <= &old_Y, stack = [wxnew, mcos]
-    ld bc, (_g_msin)
+    pop hl    ; hl <= &old_Y, stack = [wxnew]
+_self_modify_2:
+    ld bc, 0xDEAD
     ld e, (hl)
     inc hl
     ld d, (hl) ; de <= old_Y
@@ -199,8 +200,8 @@ loop_point:
     ex de, hl  ; hl <= old_Y, de <= &g_points[i+1]
     add hl, bc ; hl <= old_Y + msin
     ld bc, de  ; bc <= &g_points[i+1]
-    pop de     ; de <= wxnew, stack = [mcos]
-    push bc    ; stack = [&g_points[i+1], mcos]
+    pop de     ; de <= wxnew, stack = []
+    push bc    ; stack = [&g_points[i+1]]
     call l_fast_divs_16_16x16 ; hl = hl/de
     ld de, 128
     adc hl, de ; hl <= new_X
@@ -210,7 +211,7 @@ loop_point:
     ; Compute the screen offset
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-    ; stack = [&g_points[i+1], mcos]
+    ; stack = [&g_points[i+1]]
 
     ld hl, (_g_new_y)
 
@@ -225,7 +226,7 @@ loop_point:
     ld d, (hl)
     ld hl, de    ; screen offset = g_ofs[g_new_y]
 
-    ; stack = [&g_points[i+1], mcos]
+    ; stack = [&g_points[i+1]]
 
     ; add x >> 3
     ld a, c      ; a <= new_X
@@ -233,13 +234,13 @@ loop_point:
     rra          ; but it has the nasty side-effect
     rra          ; of shifting in the carry from the left
     and 0x1f     ; so ignore the upper 3 bits
-    add l        ; and just add the last 5 to L
+    add l        ; and just add the last 5 from L
     ld l, a      ; hl <= g_ofs[g_new_Y] + new_X >> 3
     ld a, c      ; a <= new_X
     ld de, hl    ; de <= g_ofs[g_new_Y] + new_X >> 3
-    pop hl       ; hl <= &g_points[i+1], stack = [mcos]
-    pop bc       ; bc is now mcos again, stack is clean
-                 ; to communicate past the EXX,
+    pop hl       ; hl <= &g_points[i+1], stack = []
+                 ; stack is clean, so we can now
+                 ; communicate past the EXX,
                  ; shove values in the stack:
     push de      ; stack = [g_ofs[g_new_Y] + new_X >> 3]
     push af      ; stack = [new_X, g_ofs[g_new_Y] + new_X >> 3]
@@ -253,8 +254,8 @@ loop_point:
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Store the offset and mask for the new pixel
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    pop af      ; a = new_X
-    pop de      ; de = g_ofs[g_new_Y] + new_X >> 3
+    pop af      ; a = new_X  , stack = [g_ofs[g_new_Y] + new_X >> 3]
+    pop de      ; de = g_ofs[g_new_Y] + new_X >> 3,  stack = []
     ld (hl), e  ; store computed screen offset into g_old_vram_offsets
     inc hl
     ld (hl), d
@@ -264,7 +265,7 @@ loop_point:
     ; Compute the mask
     ;;;;;;;;;;;;;;;;;;
 
-    push bc     ; store the counter of the 153 points
+    push bc     ; stack = [counter of the 153 points loop]
 
     ; Use a small lookup table to avoid this loop:
     ;
@@ -285,15 +286,14 @@ loop_point:
     ld   c, a
     ld   a, (bc)
 
-write_mask:
     ld (hl), a  ; store the mask into g_old_vram_offsets
     inc hl      ; move pointer to next slot of g_old_vram_offsets
-    push hl
+    push hl     ; stack = [ptr to next slot of g_old_vram_offsets, counter of 153 pts loop]
     ld hl, de   ; Write new pixel to screen!
     or (hl)
     ld (hl), a
-    pop hl      ; hl <= g_old_vram_offsets, new slot
-    pop bc      ; bc <= counter of 153 points
+    pop hl      ; hl <= ptr to new slot of g_old_vram_offsets, stack = [counter of 153pts loop]
+    pop bc      ; bc <= counter of 153 points loop
 
 loop_closing:
     dec b
@@ -306,9 +306,8 @@ loop_closing:
 
 bad_y:
     ; stack = [&old_Y, wxnew, mcos]
-    pop hl         ; hl <= &old_Y, stack = [wxnew, mcos]
-    pop bc         ; popping of (useless) wxnew, stack = [mcos]
-    pop bc         ; bc is now mcos again, stack is empty
+    pop hl         ; hl <= &old_Y, stack = [wxnew]
+    pop bc         ; popping of (useless) wxnew, stack = []
     inc hl
     inc hl         ; hl now points to &g_points[i+1]
 
