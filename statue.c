@@ -178,9 +178,8 @@ loop_point:
     ld a, h
     and 0x80 ; negative
     jnz bad_y
-    ld de, 192 ; SCREEN_HEIGHT
-    or a ; clear carry
-    sbc hl, de ; larger than 191
+    ld a, l
+    sbc 191  ; 128+64 = 192, Speccys screen height...
     jnc bad_y
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
