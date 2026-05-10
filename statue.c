@@ -420,5 +420,7 @@ main()
             printf("%ld frames\n%3.1f FPS \n", frames, ((float)frames)/(total_clocks/CLOCKS_PER_SEC));
 	}
     }
+    zx_border(INK_WHITE);
+    memset((void *)22528.0, 0x38, 768);
     return 0;
 }
