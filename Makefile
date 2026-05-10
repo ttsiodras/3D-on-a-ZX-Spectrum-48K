@@ -28,7 +28,7 @@ all:	${EXE}
 mask.bin: tables_gen.py
 	python3 $<
 
-${EXE}:	statue.c $(wildcard *h) tables.asm mask.bin
+${EXE}:	statue.c $(wildcard *h) tables.asm mask.bin scr_ofs.bin
 	${Q}echo "[CC] " $<
 	${Q}zcc +zx -lndos -create-app -O3 -o statue $< tables.asm -lm -m --list
 	${Q}rm -f statue statue*bin zcc_opt.def

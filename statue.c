@@ -23,12 +23,8 @@
 // The buffer keeping the old frame's screen offset/pixel mask
 unsigned char g_old_vram_offsets[3*ELEMENTS(g_points)];
 
-// Lookup table for Speccy's insane screen offsets
-unsigned char *g_ofs[SCREEN_HEIGHT];
-
-// Too few registers in the Z80! I needed some scratch space
-// to hold the computed screen Y coordinate. IX/IY are too slow!
-int g_new_y;
+// Lookup table for Speccy's insane screen offsets (see tables_gen.py)
+extern unsigned scr_ofs[192];
 
 // Inline Z80 assembly! After 4 decades, I "spoke" Z80 again today :-)
 // And it was worth it - frame rate went from 5.4 to 10.5 FPS.
@@ -168,19 +164,17 @@ _self_modify_1:
     ld hl, 96
     or a ; clear carry
     sbc hl, de ; hl = 96 - (old_Z/wxnew), stack = [&old_Y, wxnew]
-    ld (_g_new_y), hl    ; stack = [&old_Y, wxnew]
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ; Check if g_new_Y is within bounds
+    ; Check if new_Y is within bounds
+    ; Reminder: stack = [&old_Y, wxnew]
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    ; stack = [&old_Y, wxnew]
 
-    ld a, h
-    and 0x80 ; negative
-    jnz bad_y
+    bit 7, h
+    jr nz,bad_y      ; reject newY < 0
     ld a, l
-    sbc 191  ; 128+64 = 192, Speccys screen height...
-    jnc bad_y
+    cp 191
+    jr nc,bad_y      ; reject newY > 191
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; All good, compute the new_X
@@ -202,7 +196,9 @@ _self_modify_2:
     ld bc, de  ; bc <= &g_points[i+1]
     pop de     ; de <= wxnew, stack = []
     push bc    ; stack = [&g_points[i+1]]
+    push af
     call l_fast_divs_16_16x16 ; hl = hl/de
+    pop af
     ld de, 128
     adc hl, de ; hl <= new_X
     ld bc, hl  ; bc <= new_X
@@ -213,18 +209,35 @@ _self_modify_2:
 
     ; stack = [&g_points[i+1]]
 
-    ld hl, (_g_new_y)
-
-    ; I used to call zx_py2saddr here
-    ; but a lookup table is 10 per cent faster
-    add hl, hl   ; 2*g_new_y since we are indexing array of 16bit offsets
-    ld de, hl
-    ld hl, _g_ofs  ; base of the array
+    ; I used to call zx_py2saddr here, but a lookup table is 10 per cent faster
+    ; ...and no, inlining it doesnt help either:
+    ; ld l, a
+    ; ld a, l
+    ; and $07
+    ; ld h, a
+    ; ld a, l
+    ; and $c0
+    ; rra
+    ; inc a
+    ; rrca
+    ; rrca
+    ; or h
+    ; ld h, a
+    ; ld a, l
+    ; add a
+    ; add a
+    ; and $e0
+    ; ld l, a
+    
+    sla a         ; 2x new_y but may not fit and trigger carry
+    ld e, a       ; d is still 0 see assignement to 128 above so use the carry
+    rl d          ; to make DE to be 2x new_y
+    ld hl, _scr_ofs
     add hl, de
     ld e, (hl)
     inc hl
     ld d, (hl)
-    ld hl, de    ; screen offset = g_ofs[g_new_y]
+    ld hl, de    ; screen offset = scr_ofs[g_new_y]
 
     ; stack = [&g_points[i+1]]
 
@@ -235,15 +248,15 @@ _self_modify_2:
     rra          ; of shifting in the carry from the left
     and 0x1f     ; so ignore the upper 3 bits
     add l        ; and just add the last 5 from L
-    ld l, a      ; hl <= g_ofs[g_new_Y] + new_X >> 3
+    ld l, a      ; hl <= scr_ofs[g_new_Y] + new_X >> 3
     ld a, c      ; a <= new_X
-    ld de, hl    ; de <= g_ofs[g_new_Y] + new_X >> 3
+    ld de, hl    ; de <= scr_ofs[g_new_Y] + new_X >> 3
     pop hl       ; hl <= &g_points[i+1], stack = []
                  ; stack is clean, so we can now
                  ; communicate past the EXX,
                  ; shove values in the stack:
-    push de      ; stack = [g_ofs[g_new_Y] + new_X >> 3]
-    push af      ; stack = [new_X, g_ofs[g_new_Y] + new_X >> 3]
+    push de      ; stack = [scr_ofs[g_new_Y] + new_X >> 3]
+    push af      ; stack = [new_X, scr_ofs[g_new_Y] + new_X >> 3]
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Switch back to normal register set
@@ -254,8 +267,8 @@ _self_modify_2:
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Store the offset and mask for the new pixel
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-    pop af      ; a = new_X  , stack = [g_ofs[g_new_Y] + new_X >> 3]
-    pop de      ; de = g_ofs[g_new_Y] + new_X >> 3,  stack = []
+    pop af      ; a = new_X  , stack = [scr_ofs[g_new_Y] + new_X >> 3]
+    pop de      ; de = scr_ofs[g_new_Y] + new_X >> 3,  stack = []
     ld (hl), e  ; store computed screen offset into g_old_vram_offsets
     inc hl
     ld (hl), d
@@ -305,7 +318,7 @@ loop_closing:
     ret
 
 bad_y:
-    ; stack = [&old_Y, wxnew, mcos]
+    ; stack = [&old_Y, wxnew]
     pop hl         ; hl <= &old_Y, stack = [wxnew]
     pop bc         ; popping of (useless) wxnew, stack = []
     inc hl
@@ -378,8 +391,6 @@ main()
         g_sincos[i].si <<= 6;
         g_sincos[i].co /= 3;
     }
-    for(i=0; i<SCREEN_HEIGHT; i++)
-        g_ofs[i] = zx_py2saddr(i);
 
     // Q will quit.
     uint qq = in_LookupKey('q');
