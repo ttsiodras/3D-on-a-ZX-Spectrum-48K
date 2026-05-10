@@ -196,11 +196,11 @@ _self_modify_2:
     ld bc, de  ; bc <= &g_points[i+1]
     pop de     ; de <= wxnew, stack = []
     push bc    ; stack = [&g_points[i+1]]
-    push af
+    push af    ; save new_y (i.e. A)
     call l_fast_divs_16_16x16 ; hl = hl/de
-    pop af
+    pop af     ; restore new_y (i.e. A)
     ld de, 128
-    adc hl, de ; hl <= new_X
+    add hl, de ; hl <= new_X
     ld bc, hl  ; bc <= new_X
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -291,7 +291,8 @@ _self_modify_2:
     ;     djnz shift_loop
     ; write_mask:
     ;     ...
-    ; 2% speedup
+    ;
+    ; lookup table gives 2% speedup over the above
 
     and  7  
     extern _mask_table
