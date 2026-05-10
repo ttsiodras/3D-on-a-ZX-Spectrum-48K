@@ -59,6 +59,9 @@ thus leading to the simplest possible equations:
 No multiplications, no shifts; just two divisions, and a 
 few additions/subtractions.
 
+If you're wondering how can this possibly be a valid 3D projection,
+read the full-of-math section further below :-)
+
 But that was not the end - if one is to reminisce, one must go
 **all the way**!
 
@@ -112,5 +115,202 @@ on the real thing, not just on the Free Unix Spectrum Emulator :-)
 Then again, maybe you, kind reader, can try this out
 on your Speccy - and tell me if it works?
 
-Cheers!  
+Cheers!
 Thanassis.
+
+# For math nerds - how the projection works
+
+From raw float data to ZX Spectrum screen pixels, every scaling factor explained.
+
+## 1. Source Data
+
+The statue model is 153 3D points, stored in `statue.h` in two forms:
+
+    Float  ( #define FLOAT  ) : original values
+    Integer ( default       ) : pre-scaled by S = 8960
+
+Both encode the same geometry. The integer form is used at runtime to avoid FP
+math on the Z80.
+
+### 1.1. Float-to-integer conversion
+
+The scale factor S = 8960 is uniform across all three axes - for example...
+
+    { 0.131,  0.116, -0.501 } x 8960 -> { 1176,  1040, -4485 }
+
+Note that the actual ranges per axis are **asymmetrical**: the model is not centered.
+
+    Axis  |  Float min  |  Int min  |  Float max  |  Int max
+    ------+-------------+-----------+-------------+----------
+    X     | -0.285      | -2551     | +0.275      | +2460
+    Y     | -0.405      | -3630     | +0.373      | +3346
+    Z     | -0.501      | -4484     | +0.501      | +4488
+
+## 2. Preprocessing (in main())
+
+### 2.1. Axis swap
+
+  tmp = Y;  Y = Z;  Z = tmp
+
+The storage order becomes [X, Z, Y] instead of [X, Y, Z].  The per-point loop then
+computes depth and screen-Y first, and skips computing screen-X for out-of-bounds
+points -- a good optimisation.
+
+### 2.2. Point coordinates
+
+We will denote the integer values in the global array with suffix _raw_.
+
+The loop inside main() performs this preprocessing:
+
+    Component     | Raw formula              | After axis swap
+    --------------+--------------------------+--------------------
+    X'            | SE - X_raw / 14          | depth axis
+    Y'            | Y_raw / 9 * 64           | screen-X axis [2]
+    Z'            | Z_raw / 9 * 64           | screen-Y axis [1]
+
+With SE = 415 ( 256 + MAXX/16 ), and S = 8960:
+
+    X' = 415 - X_float * 640
+    Y' = Y_float * 63795.6
+    Z' = Z_float * 63795.6
+
+### 2.3. Sine / cosine (camera orbit)
+
+The sin_raw and cos_raw are 8.8 fixed-point-scaled. But on top of that...
+
+    sin_val = sin_raw / 3 * 64
+    cos_val = cos_raw / 3 * 64
+
+...so with T = 256 (the raw sin/cos table scale):
+
+    msin = sin(theta) * T * 64 / 3 = sin(theta) * 5461.3
+    mcos = cos(theta) * T * 64 / 3 = cos(theta) * 5461.3
+
+These different scale factors set the camera's orbit radius; tweaking to
+match the "orbit" perfectly to the model size.
+
+---
+
+## 3. The Projection Equations inside drawPoints
+
+The simplest possible projection - no multiplications at run-time, only divisions!
+
+    wxnew = X'  - mcos
+    y     = 96  - Z' / wxnew
+    x     = 128 + (Y' + msin) / wxnew
+
+How? Let's explain...
+
+### 3.1. Full derivation in world units
+
+Factor out 640 from the depth term:
+
+    wxnew = X' - mcos
+    wxnew = (415 - X_float * 640) - (cos(theta) * 5461.3)
+    wxnew = 640 * (415/640 - X_float - cos(theta) * 5461.3/640)
+          = 640 * (0.6484 - X_float - cos(theta) * 8.533)
+
+Now, if we divide all numerators and denominators in the projection division by 640...
+
+    y = 96  - Z' / wxnew
+    x = 128 + (Y' + msin) / wxnew
+
+...the equations become:
+
+                                Z_float * 99.68
+     y_screen = 96 - -------------------------------------------
+                       0.6484 - X_float - cos(theta) * 8.533
+
+
+                        Y_float * 99.68 + sin(theta) * 8.533
+    x_screen = 128 + ---------------------------------------------
+                       0.6484 - X_float - cos(theta) * 8.533
+
+If we define depth as the positive distance:
+
+    depth = X_float + d * cos(theta) - d0
+
+...and...
+
+    f  ~ 99.68 px        focal length       = S / 90
+    d  ~  8.53 units     orbit radius       = T * 64 / (3 * 640)
+    d0 ~  0.65 units     SE offset          = 415 / 640
+
+...then the full projection equations become:
+
+                      f * Z
+    y_screen = 96 - ---------
+                      depth
+
+
+                      f * Y + d * sin(theta)
+    x_screen = 128 + ------------------------
+                              depth
+
+It becomes clear now that these are the standard 3D projection equations;
+with the `d*sin(theta)` offseting our camera's viewpoint by the rotation we apply.
+
+### 3.2. What each parameter means
+
+    Parameter    | Value       | Derivation                    | Role
+    -------------+-------------+-------------------------------+----------------------------
+    f            | 99.68 px    | S * 64/9 / 640 = S / 90       | Focal length, controls proj size
+    d            |  8.53 units | T * 64/3 / 640 = 256/30       | Camera orbit radius
+    d0           |  0.65 units | SE / 640 = 415 / 640          | Keeps model in front of camera
+    Screen centre| (128, 96)   | -                             | Half of 256 x 192
+    View dir     | +X          | -                             | Camera looks along +X axis
+
+## 4. Camera Model
+
+The camera goes around on a circle - around a point at a specific distance from the model.
+
+    camera_X(theta) = d * cos(theta) - d0 = 8.53 * cos(theta) - 0.65
+
+### 4.1. Why SE = 415?
+
+  SE = 256 + MAXX / 16 = 256 + 2551 / 16 = 256 + 159 = 415
+
+    256      screen width, centres the model horizontally
+    MAXX/16  accounts for the X-range after preprocessing
+
+Without SE,  X' = -X_float * 640  could be negative for positive X, flipping the
+division sign and putting the model behind the camera.  SE adds a constant offset
+so X' stays positive and  depth > 0  for all model points.
+
+---
+
+## 5. Summary: The Full Pipeline
+
+    Float data {X, Y, Z}
+           |
+           |  Scale: * 8960  (statue.h)
+           v
+    Integer data
+           |
+           |  Preprocessing
+           v
+    X' = 415 - X_raw / 14     -> depth axis
+    Y' = Y_raw / 9 * 64       -> screen-X axis (stored at [2])
+    Z' = Z_raw / 9 * 64       -> screen-Y axis (stored at [1])
+  
+    msin = sin(theta) * 5461  -> camera lateral offset
+    mcos = cos(theta) * 5461  -> camera depth offset
+  
+    Axis swap: [X, Y, Z] -> [X, Z, Y] storage
+  
+           |
+           |  For each frame
+           v
+  
+    wxnew = X' - mcos         (depth from camera)
+    y = 96  - Z' / wxnew      (perspective -> vertical)
+  
+           |
+           |  If 0 <= y < 192:
+           v
+
+    x = 128 + (Y' + msin) / wxnew  (perspective -> horizontal)
+
+    byte_addr = ofs[y] + (x >> 3)
+    bit_mask  = 128 >> (x & 7)
+    set bit in byte
