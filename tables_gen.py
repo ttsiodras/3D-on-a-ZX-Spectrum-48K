@@ -1,10 +1,5 @@
-# Previous failed experiment
-#
-# SCALE = 16384
-# with open("recip.bin", "wb") as f:
-#     for de in range(768):
-#         val = 0 if de == 0 else int(SCALE / de)
-#         f.write(min(255, val).to_bytes(1, 'little'))
+import struct
+import math
 
 def py2saddr(y):
     # ZX Spectrum screen base is 0x4000
@@ -22,3 +17,26 @@ with open("mask.bin", "wb") as f:
 with open("scr_ofs.bin", "wb") as f:
     for y in range(192):
         f.write(py2saddr(y).to_bytes(2, 'little'))
+
+# Compute Sincos data
+# 72 entries, 5 degrees each
+with open("sincos.bin", "wb") as f:
+    for i in range(72):
+        angle_rad = math.radians(i * 5)
+        
+        # To make results fit in 16 bit, and avoid scaling
+        # in the drawPoints loop, we precompute here all that
+        # can be moved out of the inner loop.
+        # Yes, lots of magic constants :-)
+        
+        # si_raw = round(sin * 256)
+        # si_final = (si_raw // 3) << 6
+        si_raw = int(round(math.sin(angle_rad) * 256))
+        si_final = (si_raw // 3) << 6
+        
+        # co_raw = round(cos * 256)
+        # co_final = co_raw // 3
+        co_raw = int(round(math.cos(angle_rad) * 256))
+        co_final = co_raw // 3
+        
+        f.write(struct.pack('<hh', si_final, co_final))

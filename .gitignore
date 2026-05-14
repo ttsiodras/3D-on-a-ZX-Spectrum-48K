@@ -11,3 +11,7 @@ mask.bin
 tables.asm.lis
 statue.tap
 scr_ofs.bin
+points.bin
+points_count.bin
+__pycache__/
+sincos.bin

@@ -3,7 +3,6 @@
 #include <graphics.h>
 #include <conio.h>
 
-#include "sincos.h"
 #include "statue.h"
 
 #define printInk(k)          printf("\x10%c", '0'+(k))
@@ -16,15 +15,15 @@
 // 3D projection
 /////////////////
 
-// Inline assembly requires global symbols for visibility
-// (the variables below are accessed in the Z80 asm code
-//  via their C-mangled named (i.e. prefixed with '_').
-
-// The buffer keeping the old frame's screen offset/pixel mask
-unsigned char g_old_vram_offsets[3*ELEMENTS(g_points)];
-
 // Lookup table for Speccy's insane screen offsets (see tables_gen.py)
 extern unsigned scr_ofs[192];
+
+// The compile-time created sin/cos lookup table (see tables_gen.py)
+struct sincos_t {
+    int si;
+    int co;
+};
+extern struct sincos_t g_sincos[];
 
 // Inline Z80 assembly! After 4 decades, I "spoke" Z80 again today :-)
 // And it was worth it - frame rate went from 5.4 to 10.5 FPS.
@@ -47,22 +46,22 @@ void drawPoints(int angle)
     // See "For math nerds" section for details.
     ///////////////////////////////////////////////////////////////
 
-    static int old_xx[ELEMENTS(g_points)];
-    static int old_yy[ELEMENTS(g_points)];
+    static int old_xx[256];
+    static int old_yy[256];
 
     // The scaled sin/cos for the angle being rendered in this frame
     int msin = g_sincos[angle].si;
     int mcos = g_sincos[angle].co;
-    for(unsigned i=0; i<ELEMENTS(g_points); i++) {
+    for(unsigned i=0; i<g_points_count; i++) {
 
         // Clear old pixel
         unplot(old_xx[i], old_yy[i]);
 
         // Project to 2D. z88dk generated code speed is
         // greatly improved by inlining everything.
-        int wxnew = g_points[i][0]-mcos;
-        int x = 128 + ((g_points[i][2]+msin)/wxnew);
-        int y = 96 - (g_points[i][1]/wxnew);
+        int wxnew = g_points_raw[i*3] - mcos;
+        int x = 128 + ((g_points_raw[i*3 + 2] + msin) / wxnew);
+        int y = 96 - (g_points_raw[i*3 + 1] / wxnew);
 
         // Set new pixel
         plot(x, y);
@@ -74,6 +73,13 @@ void drawPoints(int angle)
 }
 
 #else
+
+// Inline assembly requires global symbols for visibility
+// (the variables below are accessed in the Z80 asm code
+//  via their C-mangled named (i.e. prefixed with '_').
+
+// The buffer keeping the old frame's screen offset/pixel mask
+unsigned char g_old_vram_offsets[3*256];
 
 extern char self_modify_1[2];
 extern char self_modify_2[2];
@@ -94,10 +100,11 @@ void drawPoints(int angle)
     push de
     push hl
     push af
-    ld b, 153 ; ELEMENTS(g_points)
+    ld hl, _g_points_count
+    ld b, (hl)
     ld hl, _g_old_vram_offsets
     exx
-    ld hl, _g_points
+    ld hl, _g_points_raw
     exx
 loop_point:
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -356,42 +363,8 @@ main()
     memset((void *)22528.0, 7, 768);
     printPaper(0);
     printInk(3);
-    printf("%d points\n", ELEMENTS(g_points));
+    printf("%d points\n", g_points_count);
     printf("Press Q to quit\n");
-
-    ///////////////////////////////////////////////////
-    // To make results fit in 16 bit, and avoid scaling
-    // in the drawPoints loop, I precompute here all that
-    // I can move out of the inner loop in drawPoints.
-    // Yes, lots of magic constants :-)
-    ///////////////////////////////////////////////////
-    #define SE (256+MAXX/16)
-
-    for(i=0; i<ELEMENTS(g_points); i++) {
-        int help;
-        g_points[i][0] /= 14;
-        g_points[i][0] = SE-g_points[i][0];
-        g_points[i][1] /= 9;
-        g_points[i][1] <<= 6;
-        g_points[i][2] /= 9;
-        g_points[i][2] <<= 6;
-
-        // Another speed improvement comes from this:
-        help = g_points[i][1];
-        g_points[i][1] = g_points[i][2];
-        g_points[i][2] = help;
-        // Orientation in points array is now X, Z, Y.
-        // This allows us to compute wxnew and g_new_Y first.
-        // We can then forgo the computation of the new_X,
-        // if the g_new_Y is out of bounds.
-        //
-        // Early abort=>speedup!
-    }
-    for(i=0; i<ELEMENTS(g_sincos); i++) {
-        g_sincos[i].si /= 3;
-        g_sincos[i].si <<= 6;
-        g_sincos[i].co /= 3;
-    }
 
     // Q will quit.
     uint qq = in_LookupKey('q');

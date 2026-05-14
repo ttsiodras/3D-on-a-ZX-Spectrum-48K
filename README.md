@@ -124,13 +124,12 @@ From raw float data to ZX Spectrum screen pixels, every scaling factor explained
 
 ## 1. Source Data
 
-The statue model is 153 3D points, stored in `statue.h` in two forms:
-
-    Float  ( #define FLOAT  ) : original values
-    Integer ( default       ) : pre-scaled by S = 8960
-
-Both encode the same geometry. The integer form is used at runtime to avoid FP
-math on the Z80.
+The statue model consists of 153 3D points, stored in `statue_data.py` as
+floating-point values. These are processed by `points_gen.py` into a binary blob
+(`points.bin`) embedded into Speccy's memory - i.e. "burned" inside the .tap file
+and used as-is at runtime. There is some pre-scaling happening, to turn them into
+integer values *(pre-scaled by S = 8960)*; simply put, integers are used at
+runtime to avoid floating point math on the Z80 - who simply doesn't support it!
 
 ### 1.1. Float-to-integer conversion
 
@@ -146,7 +145,10 @@ Note that the actual ranges per axis are **asymmetrical**: the model is not cent
     Y     | -0.405      | -3630     | +0.373      | +3346
     Z     | -0.501      | -4484     | +0.501      | +4488
 
-## 2. Preprocessing (in main())
+## 2. Preprocessing (in the build pipeline)
+
+To maximize runtime performance, the coordinates are in fact pre-transformed
+by `points_gen.py` before being embedded in the binary. Let's see how.
 
 ### 2.1. Axis swap
 
@@ -154,19 +156,19 @@ Note that the actual ranges per axis are **asymmetrical**: the model is not cent
 
 The storage order becomes [X, Z, Y] instead of [X, Y, Z].  The per-point loop then
 computes depth and screen-Y first, and skips computing screen-X for out-of-bounds
-points -- a good optimisation.
+points -- a simple optimisation that helps performance a lot with zoomed-in states.
 
 ### 2.2. Point coordinates
 
-We will denote the integer values in the global array with suffix _raw_.
-
-The loop inside main() performs this preprocessing:
+The coordinates are transformed into a "screen-ready" fixed-point space:
 
     Component     | Raw formula              | After axis swap
     --------------+--------------------------+--------------------
     X'            | SE - X_raw / 14          | depth axis
     Y'            | Y_raw / 9 * 64           | screen-X axis [2]
     Z'            | Z_raw / 9 * 64           | screen-Y axis [1]
+
+I know, this looks very cryptic :-) Bear with me - and follow along:
 
 With SE = 415 ( 256 + MAXX/16 ), and S = 8960:
 
@@ -176,15 +178,16 @@ With SE = 415 ( 256 + MAXX/16 ), and S = 8960:
 
 ### 2.3. Sine / cosine (camera orbit)
 
-The sin_raw and cos_raw are 8.8 fixed-point-scaled. But on top of that...
+The sin/cos table is precomputed in `tables_gen.py`. To match the orbit radius 
+and maintain 16-bit precision without runtime scaling, we additionally do this:
 
-    sin_val = sin_raw / 3 * 64
-    cos_val = cos_raw / 3 * 64
+    sin_val = (sin_raw / 3) * 64
+    cos_val = cos_raw / 3
 
-...so with T = 256 (the raw sin/cos table scale):
+...where the raw values are scaled by T = 256:
 
     msin = sin(theta) * T * 64 / 3 = sin(theta) * 5461.3
-    mcos = cos(theta) * T * 64 / 3 = cos(theta) * 5461.3
+    mcos = cos(theta) * T / 3 = cos(theta) * 85.3
 
 These different scale factors set the camera's orbit radius; tweaking to
 match the "orbit" perfectly to the model size.
@@ -193,13 +196,14 @@ match the "orbit" perfectly to the model size.
 
 ## 3. The Projection Equations inside drawPoints
 
-The simplest possible projection - no multiplications at run-time, only divisions!
+We end up with the simplest possible projection - no multiplications at
+run-time, only two divisions!
 
     wxnew = X'  - mcos
     y     = 96  - Z' / wxnew
     x     = 128 + (Y' + msin) / wxnew
 
-How? Let's explain...
+How? Let's see...
 
 ### 3.1. Full derivation in world units
 
@@ -248,7 +252,8 @@ If we define depth as the positive distance:
                               depth
 
 It becomes clear now that these are the standard 3D projection equations;
-with the `d*sin(theta)` offseting our camera's viewpoint by the rotation we apply.
+*(see the diagram above!)* - with the `d*sin(theta)` offseting our camera's
+viewpoint by the rotation we apply.
 
 ### 3.2. What each parameter means
 
@@ -281,22 +286,21 @@ so X' stays positive and  depth > 0  for all model points.
 
 ## 5. Summary: The Full Pipeline
 
-    Float data {X, Y, Z}
+    Float data {X, Y, Z} in `statue_data.py`
            |
-           |  Scale: * 8960  (statue.h)
+           |  Build Pipeline (`points_gen.py` & `tables_gen.py`)
            v
-    Integer data
+    Pre-transformed coordinates in `points.bin`
+    (Scale S=8960, Axis swap, and Screen-space transform applied)
            |
-           |  Preprocessing
+           |  Runtime Loop
            v
-    X' = 415 - X_raw / 14     -> depth axis
-    Y' = Y_raw / 9 * 64       -> screen-X axis (stored at [2])
-    Z' = Z_raw / 9 * 64       -> screen-Y axis (stored at [1])
+    X' = Precomputed depth axis
+    Y' = Precomputed screen-X axis (stored at [2])
+    Z' = Precomputed screen-Y axis (stored at [1])
   
-    msin = sin(theta) * 5461  -> camera lateral offset
-    mcos = cos(theta) * 5461  -> camera depth offset
-  
-    Axis swap: [X, Y, Z] -> [X, Z, Y] storage
+    msin = Precomputed sin(theta) transform
+    mcos = Precomputed cos(theta) transform
   
            |
            |  For each frame
@@ -311,6 +315,6 @@ so X' stays positive and  depth > 0  for all model points.
 
     x = 128 + (Y' + msin) / wxnew  (perspective -> horizontal)
 
-    byte_addr = ofs[y] + (x >> 3)
-    bit_mask  = 128 >> (x & 7)
+    byte_addr = ofs[y] + (x >> 3)  (done via scr_ofs lookup table)
+    bit_mask  = 128 >> (x & 7)     (done via mask lookup table
     set bit in byte
