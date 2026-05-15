@@ -61,7 +61,7 @@ few additions/subtractions.
 
 --
 **UPDATE, May/2026**: I replaced the last two divisions with two multiplications,
-using a lookup table of reciprocals (10.6 -> 13.4 FPS).
+using a lookup table of reciprocals (10.6 -> 13.6 FPS).
 --
 
 If you're wondering how can this possibly be a valid 3D projection,
@@ -76,7 +76,7 @@ of the Z80 registers [than any C compiler can](https://retrocomputing.stackexcha
 
 The result?
 
-Almost a 2x speedup... Reaching the phenomenal speed of 13.4 frames per sec :-)
+Almost a 2x speedup... Reaching the phenomenal speed of 13.6 frames per sec :-)
 
 # Pre-calculating for maximum speed
 

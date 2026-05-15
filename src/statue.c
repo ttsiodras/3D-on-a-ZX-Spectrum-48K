@@ -166,7 +166,7 @@ loop_point:
     cpl
     and (hl)
     ld (hl), a ; Clear pixel
-    ld hl, de
+    ex de, hl
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Switch to helper register set
@@ -216,7 +216,7 @@ _self_modify_1:
     ld d, (hl) ; de <= old_Z
     inc hl     ; hl <= &old_Y
     ld bc, hl  ; bc <= &old_Y
-    ld hl, de  ; hl <= old_Z
+    ex de, hl  ; hl <= old_Z
     pop de     ; de <= 1/wxnew, stack = []
     push de    ; stack = [1/wxnew]
     push bc    ; stack has [&old_Y, 1/wxnew]
@@ -299,8 +299,7 @@ _self_modify_2:
     add hl, de
     ld e, (hl)
     inc hl
-    ld d, (hl)
-    ld hl, de    ; screen offset = scr_ofs[g_new_y]
+    ld d, (hl)    ; screen offset in de = scr_ofs[g_new_y]
 
     ; stack = [&g_points[i+1]]
 
@@ -310,10 +309,9 @@ _self_modify_2:
     rra          ; but it has the nasty side-effect
     rra          ; of shifting in the carry from the left
     and 0x1f     ; so ignore the upper 3 bits
-    add l        ; and just add the last 5 from L
-    ld l, a      ; hl <= scr_ofs[g_new_Y] + new_X >> 3
+    add e        ; and just add the last 5 from E
+    ld e, a      ; DE <= scr_ofs[g_new_Y] + new_X >> 3
     ld a, c      ; a <= new_X
-    ld de, hl    ; de <= scr_ofs[g_new_Y] + new_X >> 3
     pop hl       ; hl <= &g_points[i+1], stack = []
                  ; stack is clean, so we can now
                  ; communicate past the EXX,
