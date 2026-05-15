@@ -59,8 +59,10 @@ thus leading to the simplest possible equations:
 No multiplications, no shifts; just two divisions, and a 
 few additions/subtractions.
 
-UPDATE, May/2026: I replaced the last two divisions with two multiplications,
-using a lookup table of reciprocals (+6% speedup).
+--
+**UPDATE, May/2026**: I replaced the last two divisions with two multiplications,
+using a lookup table of reciprocals (10.6 -> 12.8 FPS).
+--
 
 If you're wondering how can this possibly be a valid 3D projection,
 you can read the full-of-math "for nerds" section below :-)
@@ -74,7 +76,7 @@ of the Z80 registers [than any C compiler can](https://retrocomputing.stackexcha
 
 The result?
 
-Almost a 2x speedup... Reaching the phenomenal speed of 11.2 frames per sec :-)
+Almost a 2x speedup... Reaching the phenomenal speed of 12.8 frames per sec :-)
 
 # Pre-calculating for maximum speed
 
@@ -121,7 +123,7 @@ on your Speccy - and tell me if it works?
 Cheers!
 Thanassis.
 
-# For math nerds - how the projection works
+# Addendum: For math nerds - how the projection works
 
 From raw float data to ZX Spectrum screen pixels, every scaling factor explained.
 

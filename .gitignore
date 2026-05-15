@@ -1,6 +1,4 @@
 statue
-statue.tap
-statue_BANK_7.bin
 zcc_opt.def
 statue_C
 statue_C.tap
@@ -22,3 +20,8 @@ benchy.tap
 benchy_BANK_7.bin
 recip.bin
 benchy.c.lis
+tap/statue_C.lis
+tap/statue_C.map
+tap/statue_C_BANK_7.bin
+tap/statue.tap
+tap/statue_BANK_7.bin

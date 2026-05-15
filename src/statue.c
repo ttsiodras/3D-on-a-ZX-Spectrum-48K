@@ -100,22 +100,6 @@ void drawPoints(int angle)
     jmp real_logic
 
 my_fast_div_recip_lib:
-    ; Calculate Offset: divisor * 2
-    ex de, hl
-    add hl, hl
-    ex de, hl ; de is 2 * divisor
-
-    ; Add base address of table
-    ld bc, hl
-    ld hl, _recip_table
-    add hl, de
-
-    ; Load Reciprocal into HL
-    ld e, (hl)
-    inc hl
-    ld d, (hl) ; de is reciprocal
-    ld hl, bc ; restore hl to dividend
-
     bit 7, h
     push af
     jr z, is_positive
@@ -205,8 +189,17 @@ loop_point:
 _self_modify_1:
     ld bc, 0xDEAD ; this gets assigned to g_mcos on every function call
     sbc hl, bc ; hl is now old_X-mcos => wxnew
-    ex de, hl ; hl has &old_Z, de has wxnew
-    push de ; stack = [wxnew]
+    add hl, hl ; hl => 2*wxnew
+    ld bc, hl
+    ld hl, _recip_table
+    add hl, bc
+    ; Load Reciprocal into HL
+    ld c, (hl)
+    inc hl
+    ld b, (hl) ; bc is 1/wxnew
+    ld hl, bc ; hl is 1/wxnew
+    ex de, hl ; hl has &old_Z, de has 1/wxnew
+    push de ; stack = [1/wxnew]
 
     ;;;;;;;;;;;;;;;;;;;;;;
     ; Computing screen Y
@@ -218,19 +211,19 @@ _self_modify_1:
     inc hl     ; hl <= &old_Y
     ld bc, hl  ; bc <= &old_Y
     ld hl, de  ; hl <= old_Z
-    pop de     ; de <= wxnew, stack = []
-    push de    ; stack = [wxnew]
-    push bc    ; stack has [&old_Y, wxnew]
-    ; call l_fast_divs_16_16x16 ; hl <= old_Z / wxnew
-    call my_fast_div_recip_lib ; hl <= old_Z / wxnew
-    ld de, hl  ; de = old_Z / wxnew
+    pop de     ; de <= 1/wxnew, stack = []
+    push de    ; stack = [1/wxnew]
+    push bc    ; stack has [&old_Y, 1/wxnew]
+    ; call l_fast_divs_16_16x16 ; hl <= old_Z * 1/wxnew
+    call my_fast_div_recip_lib ; hl <= old_Z * 1/wxnew
+    ld de, hl  ; de = old_Z * 1/wxnew
     ld hl, 96
     or a ; clear carry
-    sbc hl, de ; hl = 96 - (old_Z/wxnew), stack = [&old_Y, wxnew]
+    sbc hl, de ; hl = 96 - (old_Z/wxnew), stack = [&old_Y, 1/wxnew]
 
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; Check if new_Y is within bounds
-    ; Reminder: stack = [&old_Y, wxnew]
+    ; Reminder: stack = [&old_Y, 1/wxnew]
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
     bit 7, h
@@ -247,7 +240,7 @@ _self_modify_1:
     ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
     ; stack = [&old_Y, wxnew]
 
-    pop hl    ; hl <= &old_Y, stack = [wxnew]
+    pop hl    ; hl <= &old_Y, stack = [1/wxnew]
 _self_modify_2:
     ld bc, 0xDEAD ; msin
     ld e, (hl)
@@ -257,7 +250,7 @@ _self_modify_2:
     ex de, hl  ; hl <= old_Y, de <= &g_points[i+1]
     add hl, bc ; hl <= old_Y + msin
     ld bc, de  ; bc <= &g_points[i+1]
-    pop de     ; de <= wxnew, stack = []
+    pop de     ; de <= 1/wxnew, stack = []
     push bc    ; stack = [&g_points[i+1]]
     push af    ; save new_y (i.e. A)
     ; call l_fast_divs_16_16x16 ; hl = hl/de
@@ -383,9 +376,9 @@ loop_closing:
     ret
 
 bad_y:
-    ; stack = [&old_Y, wxnew]
-    pop hl         ; hl <= &old_Y, stack = [wxnew]
-    pop bc         ; popping of (useless) wxnew, stack = []
+    ; stack = [&old_Y, 1/wxnew]
+    pop hl         ; hl <= &old_Y, stack = [1/wxnew]
+    pop bc         ; popping of (useless) 1/wxnew, stack = []
     inc hl
     inc hl         ; hl now points to &g_points[i+1]
 
