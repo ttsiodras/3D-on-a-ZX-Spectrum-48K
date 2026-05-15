@@ -363,11 +363,10 @@ _self_modify_2:
 
     ld (hl), a  ; store the mask into g_old_vram_offsets
     inc hl      ; move pointer to next slot of g_old_vram_offsets
-    ld bc, hl   ; bc = next g_old_vram_offset, stack = [counter of 153 pts loop]
-    ld hl, de   ; Write new pixel to screen!
+    ex de, hl   ; Write new pixel to screen! Bring screen ptr back to hl
     or (hl)
     ld (hl), a
-    ld hl, bc   ; hl <= ptr to new slot of g_old_vram_offsets, stack = [counter of 153pts loop]
+    ex de, hl   ; hl <= g_old_vram_offsets
     pop bc      ; bc <= counter of 153 points loop
 
 loop_closing:
