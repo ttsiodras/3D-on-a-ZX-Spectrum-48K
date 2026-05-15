@@ -349,7 +349,7 @@ bad_y:
 main()
 {
     long frames = 0;
-    long m = 0, st, en;
+    unsigned long m = 0, st, en;
     float total_clocks = 0.;
     unsigned i = 0;
 

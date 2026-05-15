@@ -38,10 +38,17 @@ ${EXE}:	statue.c $(wildcard *h) tables.asm mask.bin scr_ofs.bin points.bin point
 	${Q}rm -f statue statue*bin zcc_opt.def
 	${Q}echo "[LD] " $@
 
+
 ${EXE_C}:	statue.c $(wildcard *.h) tables.asm mask.bin scr_ofs.bin points.bin points_count.bin sincos.bin
 	${Q}echo "[CC] " $<
 	${Q}zcc +zx -lndos -create-app -DIN_C -O2 --opt-code-speed=all -Cc-unsigned -o statue_C $< tables.asm -lm
 	${Q}rm -f statue_C statue*bin zcc_opt.def
+	${Q}echo "[LD] " $@
+
+bency: bency.c
+	${Q}echo "[CC] " $<
+	${Q}zcc +zx -lndos -create-app -O3 -o bency $< tables.asm -lfastmath -lm
+	${Q}rm -f bency.bin zcc_opt.def
 	${Q}echo "[LD] " $@
 
 run:	${EXE}
@@ -49,6 +56,9 @@ run:	${EXE}
 
 run_C:	${EXE_C}
 	fuse -g tv3x $<
+
+run_bency:	bency
+	fuse -g tv3x $<.tap
 
 clean:
 	${Q}echo "[CLEAN]"

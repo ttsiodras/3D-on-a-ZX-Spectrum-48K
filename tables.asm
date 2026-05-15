@@ -5,6 +5,11 @@ align 256
 _mask_table:
     BINARY "mask.bin"
 
+PUBLIC _recip_table
+align 256
+_recip_table:
+    BINARY "recip.bin"
+
 PUBLIC _scr_ofs
 align 256
 _scr_ofs:
