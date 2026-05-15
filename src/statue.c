@@ -99,19 +99,6 @@ void drawPoints(int angle)
 #asm
     jmp real_logic
 
-negate_hl:
-    ld a, l
-    cpl
-    ld l, a
-    ld a, h
-    cpl
-    ld h, a
-    inc l
-    jp nc, time_to_ret
-    inc h
-time_to_ret:
-    ret
-
 my_fast_div_recip_lib:
     ; Calculate Offset: divisor * 2
     ex de, hl
@@ -132,14 +119,31 @@ my_fast_div_recip_lib:
     bit 7, h
     push af
     jr z, is_positive
-    call negate_hl
+    ld a, l
+    cpl
+    ld l, a
+    ld a, h
+    cpl
+    ld h, a
+    inc l
+    jp nc, is_positive
+    inc h
 is_positive:
     extern l_fast_mulu_32_16x16
     call l_fast_mulu_32_16x16
     pop af
     jr z, was_positive
     ex de, hl
-    call negate_hl
+    ld a, l
+    cpl
+    ld l, a
+    ld a, h
+    cpl
+    ld h, a
+    inc l
+    jp nc, just_ret
+    inc h
+just_ret:
     ret
 was_positive:
     ld hl, de
