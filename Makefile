@@ -81,7 +81,7 @@ run_benchy:	benchy
 
 clean:
 	${Q}echo "[CLEAN]"
-	${Q}rm -rf tap codegen/*.bin codegen/*lis
+	${Q}rm -rf tap codegen/*.bin codegen/*lis src/*lis
 	${Q}rm -f mask.bin scr_ofs.bin points.bin points_count.bin sincos.bin recip.bin
 	${Q}rm -rf codegen/__pycache__
 
