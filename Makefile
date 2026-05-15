@@ -47,7 +47,7 @@ ${EXE_C}:	statue.c $(wildcard *.h) tables.asm mask.bin scr_ofs.bin points.bin po
 
 bency: bency.c
 	${Q}echo "[CC] " $<
-	${Q}zcc +zx -lndos -create-app -O3 -o bency $< tables.asm -lfastmath -lm
+	${Q}zcc +zx -lndos -create-app -O3 -o bency $< tables.asm -lm -m --list
 	${Q}rm -f bency.bin zcc_opt.def
 	${Q}echo "[LD] " $@
 

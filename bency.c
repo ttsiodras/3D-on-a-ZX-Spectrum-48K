@@ -50,25 +50,77 @@ void call_fast_div() {
 #endasm
 }
 
-int my_fast_div_recip_c(int dividend, int divisor) {
-    // Now divisor d is exactly at offset d * 2
-    uint8_t *ptr = (uint8_t *)recip_table + (divisor * 2);
-    uint16_t recip = ptr[0] | (ptr[1] << 8);
-    uint32_t product = (uint32_t)dividend * (uint32_t)recip;
-    return (int)(product >> 16);
+void my_fast_div_recip_lib() {
+#asm
+    push bc
+    push de
+    push hl
+    push af
+
+    ; 1 Calculate Offset: divisor * 2
+    ld hl, _g_divisor
+    ld e, (hl)
+    inc hl
+    ld d, (hl)
+    ex de, hl
+    add hl, hl
+    ex de, hl ; de is 2 * divisor
+
+    ; 2 Add base address of table
+    ld hl, _recip_table
+    add hl, de
+
+    ; 3 Load Reciprocal into HL
+    ld e, (hl)
+    inc hl
+    ld d, (hl) ; de is reciprocal
+
+    ; 4 Load Dividend into hl
+    ld hl, _g_dividend
+    ld a, (hl)
+    inc hl
+    ld h, (hl)
+    ld l, a
+
+    ; 5 Call l_fast_mulu_32_16x16
+    extern l_fast_mulu_32_16x16
+    call l_fast_mulu_32_16x16
+    
+    ; 6 Store high word (DE) into g_result
+    ld hl, _g_result
+    ld (hl), e
+    inc hl
+    ld (hl), d
+
+    pop af
+    pop hl
+    pop de
+    pop bc
+#endasm
 }
 
 int main() {
     unsigned long st, en;
     float duration_fast, duration_my;
 
-    printf("Benchmarking: l_fast_divs vs my_fast_div (C-Lookup Fixed Table)\n");
+    // --- TABLE VERIFICATION ---
+    // printf("Table Verification:\n");
+    // for (int d = 16; d <= 16; d++) {
+    //     uint8_t *ptr = (uint8_t *)recip_table + (d * 2);
+    //     uint16_t val = ptr[0] | (ptr[1] << 8);
+    //     printf("d=%3d: 0x%04x (%d)\n", d, val, val);
+    // }
+    // printf("--------------------------------------------\n");
+
+    printf("Benchmarking: l_fast_divs vs my_fast_div (Lib-Mul)\n");
     printf("Divisor  | Total Fast | Total My | Status\n");
     printf("--------------------------------------------\n");
 
-    for (int divisor = 1; divisor <= 1023; divisor += 15) {
-        
+    int res_fast, res_my;
+
+    for (int divisor = 2; divisor <= 1023; divisor += 15) {
         duration_fast = 0.0;
+        duration_my = 0.0;
         for (int dividend = 0; dividend <= 31000; dividend += 15) {
             g_dividend = dividend;
             g_divisor = divisor;
@@ -76,32 +128,23 @@ int main() {
             call_fast_div();
             en = clock();
             duration_fast += (float)(en - st);
-        }
-
-        duration_my = 0.0;
-        for (int dividend = 0; dividend <= 31000; dividend += 15) {
+            res_fast = g_result;
             st = clock();
-            my_fast_div_recip_c(dividend, divisor);
+            my_fast_div_recip_lib();
             en = clock();
+            res_my = g_result;
             duration_my += (float)(en - st);
+            int delta = abs(res_fast - res_my);
+            if (delta > 1) {
+                printf("\n!!! CORRECTNESS FAIL at 15000/%u: %u vs %u\n", divisor, res_fast, res_my);
+                return 1;
+            }
         }
-
-        // Correctness check
-        g_dividend = 15000;
-        g_divisor = divisor;
-        call_fast_div();
-        int res_fast = g_result;
-        
-        int res_my = my_fast_div_recip_c(15000, divisor);
-
-        if (divisor != 1 && abs(res_fast - res_my) > 1) {
-            printf("\n!!! CORRECTNESS FAIL at 15000/%d: %d vs %d\n", divisor, res_fast, res_my);
-            return 1;
-        }
-
-        printf("%8d | %11f | %11f | %s\n", divisor, duration_fast, duration_my, (duration_my < duration_fast) ? "WIN" : "LOSE");
+        float t_delta = 100.0*(duration_fast - duration_my)/duration_fast;;
+        printf("%8d | %11f | %11f | %s (pct:%3d)\n", divisor, duration_fast, duration_my, (duration_my < duration_fast) ? "WIN" : "LOSE", 
+            (int)t_delta);
     }
 
-    printf("\nALL PASS - Strategy is sound!\n");
+    printf("\nALL PASS - Library multiplication is sound!\n");
     return 0;
 }
