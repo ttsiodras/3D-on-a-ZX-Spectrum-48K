@@ -163,7 +163,7 @@ loop_point:
     dec hl
     dec hl ; hl back to g_old_vram_offsets[pt*3], to write new values into
     ex de, hl
-    xor 255
+    cpl
     and (hl)
     ld (hl), a ; Clear pixel
     ld hl, de
