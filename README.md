@@ -59,8 +59,11 @@ thus leading to the simplest possible equations:
 No multiplications, no shifts; just two divisions, and a 
 few additions/subtractions.
 
+UPDATE, May/2026: I replaced the last two divisions with two multiplications,
+using a lookup table of reciprocals (+6% speedup).
+
 If you're wondering how can this possibly be a valid 3D projection,
-read the full-of-math section further below :-)
+you can read the full-of-math "for nerds" section below :-)
 
 But that was not the end - if one is to reminisce, one must go
 **all the way**!
@@ -71,7 +74,7 @@ of the Z80 registers [than any C compiler can](https://retrocomputing.stackexcha
 
 The result?
 
-Almost a 2x speedup... Reaching the phenomenal speed of 10.5 frames per sec :-)
+Almost a 2x speedup... Reaching the phenomenal speed of 11.2 frames per sec :-)
 
 # Pre-calculating for maximum speed
 
@@ -318,3 +321,6 @@ so X' stays positive and  depth > 0  for all model points.
     byte_addr = ofs[y] + (x >> 3)  (done via scr_ofs lookup table)
     bit_mask  = 128 >> (x & 7)     (done via mask lookup table
     set bit in byte
+
+Note that in the ASM version, the final two divisions are replaced with two
+multiplications with the divider reciprocal. Speedup: 6% :-)
