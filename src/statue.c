@@ -3,8 +3,6 @@
 #include <graphics.h>
 #include <conio.h>
 
-#include "statue.h"
-
 #define printInk(k)          printf("\x10%c", '0'+(k))
 #define printPaper(k)        printf("\x11%c", '0'+(k))
 #define ELEMENTS(x)          (sizeof(x)/sizeof(x[0]))
@@ -15,20 +13,32 @@
 // 3D projection
 /////////////////
 
-// Lookup table for Speccy's insane screen offsets (see tables_gen.py)
+// compile-time created lookup table for Speccy's insane screen offsets
+// (see codegen/tables_gen.py)
 extern unsigned scr_ofs[192];
 
-// The compile-time created sin/cos lookup table (see tables_gen.py)
+// compile-time created sin/cos lookup table
+// (see codegen/tables_gen.py)
 struct sincos_t {
     int si;
     int co;
 };
 extern struct sincos_t g_sincos[];
 
+// compile-time created reciprocals lookup table
+// (see codegen/recip_gen.py)
 extern uint8_t recip_table[];
 
-// Inline Z80 assembly! After 4 decades, I "spoke" Z80 again today :-)
+// compile-time created array of statue data
+// (see codegen/points_gen.py)
+extern int g_points_raw[];
+
+// compile-time created count of points inside g_points_raw
+extern int g_points_count;
+
+// Inline Z80 assembly! After 4 decades, I "spoke" Z80 again :-)
 // And it was worth it - frame rate went from 5.4 to 10.5 FPS.
+// (re-visited 6 years later - got it up to 12.8 FPS :-)
 //
 // The Z80 C compilers are nowhere near as powerful as the GCC/Clang
 // world. Read this to see why:
@@ -83,6 +93,12 @@ void drawPoints(int angle)
 // The buffer keeping the old frame's screen offset/pixel mask
 unsigned char g_old_vram_offsets[3*256];
 
+// There are global addresses that dont change while drawPoints runs;
+// but they DO change per each call of drawPoints. To avoid wasting
+// registers and/or stack to store them, we "burn" them inside the
+// actual code of drawPoints. Self-modifying code to the rescue!
+// Look for _self_modify_1 and _self_modify_2 labels inside the
+// assembly code that follows.
 extern char self_modify_1[2];
 extern char self_modify_2[2];
 
@@ -100,38 +116,28 @@ void drawPoints(int angle)
     jmp real_logic
 
 my_fast_div_recip_lib:
-    bit 7, h
-    push af
-    jr z, is_positive
-    ld a, l
-    cpl
+    bit 7, h   ; the reciprocal is never negative - its the distance
+    jr z, is_positive  ; but the dividend can be negative
+    xor a      ; A = 0
+    sub l      ; A = -L, carry set if L != 0
+    ld l, a    ; L done
+    ld a, 0    ; A = 0 again
+    sbc a, h   ; A = 0 - H - carry
+    ld h, a    ; H done
+    call l_fast_mulu_32_16x16
+    ex de, hl  ; we get result in DE:HL, and want the upper 16 bits
+    xor a      ; so we now need to turn the result, i.e. HL, negative
+    sub l      ; just as above
     ld l, a
-    ld a, h
-    cpl
-    ld h, a
-    inc l
-    jp nc, is_positive
-    inc h
+    ld a, 0
+    sbc a, h
+    ld h, a    ; returning result in HL
+    ret
 is_positive:
     extern l_fast_mulu_32_16x16
     call l_fast_mulu_32_16x16
-    pop af
-    jr z, was_positive
-    ex de, hl
-    ld a, l
-    cpl
-    ld l, a
-    ld a, h
-    cpl
-    ld h, a
-    inc l
-    jp nc, just_ret
-    inc h
-just_ret:
-    ret
-was_positive:
-    ld hl, de
-    ret
+    ex de, hl  ; we get result in DE:HL, and want the upper 16 bits
+    ret        ; we return our (positive) HL
 
 real_logic:
     extern l_fast_divs_16_16x16
