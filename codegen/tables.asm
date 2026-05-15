@@ -3,29 +3,29 @@ SECTION data_user
 PUBLIC _mask_table
 align 256
 _mask_table:
-    BINARY "mask.bin"
+    BINARY "codegen/mask.bin"
 
 PUBLIC _recip_table
 align 256
 _recip_table:
-    BINARY "recip.bin"
+    BINARY "codegen/recip.bin"
 
 PUBLIC _scr_ofs
 align 256
 _scr_ofs:
-    BINARY "scr_ofs.bin"
+    BINARY "codegen/scr_ofs.bin"
 
 PUBLIC _g_points_count
 align 2
 _g_points_count:
-    BINARY "points_count.bin"
+    BINARY "codegen/points_count.bin"
 
 PUBLIC _g_points_raw
 align 2
 _g_points_raw:
-    BINARY "points.bin"
+    BINARY "codegen/points.bin"
 
 PUBLIC _g_sincos
 align 2
 _g_sincos:
-    BINARY "sincos.bin"
+    BINARY "codegen/sincos.bin"

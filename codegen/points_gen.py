@@ -48,8 +48,8 @@ def generate_points(scale_factor):
     with open("points.bin", "wb") as f:
         f.write(binary_data)
     
-    print(f"Generated points.bin and points_count.bin with {len(points)} points.")
-    print(f"Used Scale: {scale}, Computed Fixed MAXX: {fixed_maxx_x}, SE: {se}")
+    print(f"[CODEGEN] Generated points.bin and points_count.bin with {len(points)} points.")
+    print(f"[CODEGEN] Used Scale: {scale}, Computed Fixed MAXX: {fixed_maxx_x}, SE: {se}")
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

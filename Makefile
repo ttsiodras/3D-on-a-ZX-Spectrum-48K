@@ -15,8 +15,8 @@
 # export PATH=$HOME/Github/z88dk/bin:$PATH
 # export ZCCCFG=$HOME/Github/z88dk/lib/config
 
-EXE:=statue.tap
-EXE_C:=statue_C.tap
+ASM_TAP:=tap/statue.tap
+C_TAP:=tap/statue_C.tap
 SCALING_FACTOR?=8960
 
 Q=@
@@ -24,37 +24,56 @@ ifeq ($V,1)
 Q=
 endif
 
-all:	${EXE}
+MASK_BIN:=codegen/mask.bin
+SINCOS_BIN:=codegen/sincos.bin
+SCROFS_BIN:=codegen/scr_ofs.bin
+POINTS_BIN:=codegen/points.bin
+POINTS_CNT_BIN:=codegen/points_count.bin
+RECIP_BIN:=codegen/recip.bin
 
-mask.bin sincos.bin: codegen/tables_gen.py
-	python3 $<
+ALL_TABLES:=codegen/tables.asm
+ALL_DEPS:=${ALL_TABLES} ${MASK_BIN} ${SCROFS_BIN} ${POINTS_BIN} ${POINTS_CNT_BIN} ${SINCOS_BIN} ${RECIP_BIN}
 
-points.bin: codegen/points_gen.py codegen/statue_data.py
-	python3 $< ${SCALING_FACTOR}
+ASM_FLAGS:=+zx -lndos -create-app -O3 
+C_FLAGS:=+zx -lndos -create-app -DIN_C -O2 --opt-code-speed=all -Cc-unsigned 
+LD_FLAGS:=-lm -m --list
 
-${EXE}:	statue.c $(wildcard *h) tables.asm mask.bin scr_ofs.bin points.bin points_count.bin sincos.bin
+all:	${ASM_TAP}
+
+${MASK_BIN} ${SINCOS_BIN} ${SCROFS_BIN}: codegen/tables_gen.py
+	${Q}echo "[CODEGEN] " $@
+	${Q}cd codegen ; python3 $(notdir $<)
+
+${POINTS_BIN} ${POINTS_CNT_BIN}: codegen/points_gen.py codegen/statue_data.py
+	${Q}echo "[CODEGEN] " $@
+	${Q}cd codegen ; python3 $(notdir $<) ${SCALING_FACTOR}
+
+${RECIP_BIN}: codegen/recip_gen.py
+	${Q}echo "[CODEGEN] " $@
+	${Q}cd codegen ; python3 $(notdir $<)
+
+${ASM_TAP}:	src/statue.c $(wildcard src/*h) ${ALL_DEPS}
 	${Q}echo "[CC] " $<
-	${Q}zcc +zx -lndos -create-app -O3 -o statue $< tables.asm -lm -m --list
-	${Q}rm -f statue statue*bin zcc_opt.def
+	${Q}mkdir -p tap
+	${Q}zcc ${ASM_FLAGS} -o $(basename $@) $< ${ALL_TABLES} ${LD_FLAGS}
 	${Q}echo "[LD] " $@
 
 
-${EXE_C}:	statue.c $(wildcard *.h) tables.asm mask.bin scr_ofs.bin points.bin points_count.bin sincos.bin
+${C_TAP}:	src/statue.c $(wildcard src/*.h) ${ALL_DEPS}
 	${Q}echo "[CC] " $<
-	${Q}zcc +zx -lndos -create-app -DIN_C -O2 --opt-code-speed=all -Cc-unsigned -o statue_C $< tables.asm -lm
-	${Q}rm -f statue_C statue*bin zcc_opt.def
+	${Q}mkdir -p tap
+	${Q}zcc ${C_FLAGS} -o $(basename $@) $< ${ALL_TABLES} ${LD_FLAGS}
 	${Q}echo "[LD] " $@
 
-benchy: benchy.c
+tap/benchy.tap: src/benchy.c ${RECIP_BIN}
 	${Q}echo "[CC] " $<
-	${Q}zcc +zx -lndos -create-app -O3 -o benchy $< tables.asm -lm -m --list
-	${Q}rm -f benchy.bin zcc_opt.def
+	${Q}zcc ${ASM_FLAGS} -o $(basename $@) $< ${ALL_TABLES} ${LD_FLAGS}
 	${Q}echo "[LD] " $@
 
-run:	${EXE}
+run:	${ASM_TAP}
 	fuse -g tv3x $<
 
-run_C:	${EXE_C}
+run_C:	${C_TAP}
 	fuse -g tv3x $<
 
 run_benchy:	benchy
@@ -62,14 +81,14 @@ run_benchy:	benchy
 
 clean:
 	${Q}echo "[CLEAN]"
-	${Q}rm -rf ${EXE} ${EXE_C} statue_*.bin *.map *.lis
-	${Q}rm -f mask.bin scr_ofs.bin points.bin points_count.bin sincos.bin
-	${Q}rm -rf __pycache__
+	${Q}rm -rf tap codegen/*.bin codegen/*lis
+	${Q}rm -f mask.bin scr_ofs.bin points.bin points_count.bin sincos.bin recip.bin
+	${Q}rm -rf codegen/__pycache__
 
 # This apparently messes up the FPS counting (i.e. the "clock()" calls).
 # It does appear to be a bit faster than "optimize1", 6.1 fps maybe.
-optimized_C:	statue.c $(wildcard *.h)
+optimized_C:	src/statue.c $(wildcard src/*.h)
 	${Q}echo "[CC] " $<
-	${Q}zcc +zx -compiler=sdcc -SO3 -DIN_C -lndos -create-app -O2 --opt-code-speed=all -Cc-unsigned -o statue_C statue.c -lmath48
+	${Q}zcc +zx -compiler=sdcc -SO3 -DIN_C -lndos -create-app -O2 --opt-code-speed=all -Cc-unsigned -o statue_C $< -lmath48
 	${Q}rm -f statue_C *.bin zcc_opt.def
 	${Q}echo "[LD] " $@
