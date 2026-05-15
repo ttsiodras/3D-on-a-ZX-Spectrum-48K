@@ -113,9 +113,6 @@ time_to_ret:
     ret
 
 my_fast_div_recip_lib:
-    push bc
-    push af
-
     ; Calculate Offset: divisor * 2
     ex de, hl
     add hl, hl
@@ -143,13 +140,9 @@ is_positive:
     jr z, was_positive
     ex de, hl
     call negate_hl
-    pop af
-    pop bc
     ret
 was_positive:
     ld hl, de
-    pop af
-    pop bc
     ret
 
 real_logic:
