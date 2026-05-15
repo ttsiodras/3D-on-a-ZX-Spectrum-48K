@@ -26,10 +26,10 @@ endif
 
 all:	${EXE}
 
-mask.bin sincos.bin: tables_gen.py
+mask.bin sincos.bin: codegen/tables_gen.py
 	python3 $<
 
-points.bin: points_gen.py statue_data.py
+points.bin: codegen/points_gen.py codegen/statue_data.py
 	python3 $< ${SCALING_FACTOR}
 
 ${EXE}:	statue.c $(wildcard *h) tables.asm mask.bin scr_ofs.bin points.bin points_count.bin sincos.bin
@@ -45,10 +45,10 @@ ${EXE_C}:	statue.c $(wildcard *.h) tables.asm mask.bin scr_ofs.bin points.bin po
 	${Q}rm -f statue_C statue*bin zcc_opt.def
 	${Q}echo "[LD] " $@
 
-bency: bency.c
+benchy: benchy.c
 	${Q}echo "[CC] " $<
-	${Q}zcc +zx -lndos -create-app -O3 -o bency $< tables.asm -lm -m --list
-	${Q}rm -f bency.bin zcc_opt.def
+	${Q}zcc +zx -lndos -create-app -O3 -o benchy $< tables.asm -lm -m --list
+	${Q}rm -f benchy.bin zcc_opt.def
 	${Q}echo "[LD] " $@
 
 run:	${EXE}
@@ -57,7 +57,7 @@ run:	${EXE}
 run_C:	${EXE_C}
 	fuse -g tv3x $<
 
-run_bency:	bency
+run_benchy:	benchy
 	fuse -g tv3x $<.tap
 
 clean:

@@ -25,6 +25,8 @@ struct sincos_t {
 };
 extern struct sincos_t g_sincos[];
 
+extern uint8_t recip_table[];
+
 // Inline Z80 assembly! After 4 decades, I "spoke" Z80 again today :-)
 // And it was worth it - frame rate went from 5.4 to 10.5 FPS.
 //
@@ -95,6 +97,62 @@ void drawPoints(int angle)
     *(int*) &self_modify_1[1] = g_sincos[angle].co;
     *(int*) &self_modify_2[1] = g_sincos[angle].si;
 #asm
+    jmp real_logic
+
+negate_hl:
+    ld a, l
+    cpl
+    ld l, a
+    ld a, h
+    cpl
+    ld h, a
+    inc l
+    jp nc, time_to_ret
+    inc h
+time_to_ret:
+    ret
+
+my_fast_div_recip_lib:
+    push bc
+    push af
+
+    ; Calculate Offset: divisor * 2
+    ex de, hl
+    add hl, hl
+    ex de, hl ; de is 2 * divisor
+
+    ; Add base address of table
+    ld bc, hl
+    ld hl, _recip_table
+    add hl, de
+
+    ; Load Reciprocal into HL
+    ld e, (hl)
+    inc hl
+    ld d, (hl) ; de is reciprocal
+    ld hl, bc ; restore hl to dividend
+
+    bit 7, h
+    push af
+    jr z, is_positive
+    call negate_hl
+is_positive:
+    extern l_fast_mulu_32_16x16
+    call l_fast_mulu_32_16x16
+    pop af
+    jr z, was_positive
+    ex de, hl
+    call negate_hl
+    pop af
+    pop bc
+    ret
+was_positive:
+    ld hl, de
+    pop af
+    pop bc
+    ret
+
+real_logic:
     extern l_fast_divs_16_16x16
     push bc
     push de
@@ -166,7 +224,8 @@ _self_modify_1:
     pop de     ; de <= wxnew, stack = []
     push de    ; stack = [wxnew]
     push bc    ; stack has [&old_Y, wxnew]
-    call l_fast_divs_16_16x16 ; hl <= old_Z / wxnew
+    ; call l_fast_divs_16_16x16 ; hl <= old_Z / wxnew
+    call my_fast_div_recip_lib ; hl <= old_Z / wxnew
     ld de, hl  ; de = old_Z / wxnew
     ld hl, 96
     or a ; clear carry
@@ -193,7 +252,7 @@ _self_modify_1:
 
     pop hl    ; hl <= &old_Y, stack = [wxnew]
 _self_modify_2:
-    ld bc, 0xDEAD ; msin 
+    ld bc, 0xDEAD ; msin
     ld e, (hl)
     inc hl
     ld d, (hl) ; de <= old_Y
@@ -204,7 +263,8 @@ _self_modify_2:
     pop de     ; de <= wxnew, stack = []
     push bc    ; stack = [&g_points[i+1]]
     push af    ; save new_y (i.e. A)
-    call l_fast_divs_16_16x16 ; hl = hl/de
+    ; call l_fast_divs_16_16x16 ; hl = hl/de
+    call my_fast_div_recip_lib ; hl = hl/de
     pop af     ; restore new_y (i.e. A)
     ld de, 128
     add hl, de ; hl <= new_X
@@ -235,7 +295,7 @@ _self_modify_2:
     ; add a
     ; and $e0
     ; ld l, a
-    
+
     sla a         ; 2x new_y but may not fit and trigger carry
     ld e, a       ; d is still 0 see assignement to 128 above so use the carry
     rl d          ; to make DE to be 2x new_y
@@ -301,7 +361,7 @@ _self_modify_2:
     ;
     ; lookup table gives 2% speedup over the above
 
-    and  7  
+    and  7
     extern _mask_table
     ld   b, _mask_table >> 8
     ld   c, a
