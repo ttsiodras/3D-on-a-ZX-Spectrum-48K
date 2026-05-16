@@ -40,7 +40,7 @@ extern int g_points_count;
 
 // Inline Z80 assembly! After 4 decades, I "spoke" Z80 again :-)
 // And it was worth it - frame rate went from 5.4 to 10.5 FPS.
-// (re-visited 6 years later - got it up to 12.8 FPS :-)
+// (re-visited 6 years later - got it up to 14.0 FPS :-)
 //
 // The Z80 C compilers are nowhere near as powerful as the GCC/Clang
 // world. Read this to see why:
