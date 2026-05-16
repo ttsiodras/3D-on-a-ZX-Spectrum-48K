@@ -14,9 +14,13 @@ with open("mask.bin", "wb") as f:
     for v in [128, 64, 32, 16, 8, 4, 2, 1]:
         f.write(v.to_bytes(1, 'little'))
 
-with open("scr_ofs.bin", "wb") as f:
+with open("scr_ofs_lo.bin", "wb") as f:
     for y in range(192):
-        f.write(py2saddr(y).to_bytes(2, 'little'))
+        f.write((py2saddr(y) & 0xff).to_bytes(1, 'little'))
+
+with open("scr_ofs_hi.bin", "wb") as f:
+    for y in range(192):
+        f.write((py2saddr(y) >> 8).to_bytes(1, 'little'))
 
 # Compute Sincos data
 # 72 entries, 5 degrees each

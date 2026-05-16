@@ -15,7 +15,8 @@
 
 // compile-time created lookup table for Speccy's insane screen offsets
 // (see codegen/tables_gen.py)
-extern unsigned scr_ofs[192];
+extern unsigned char scr_ofs_lo[];
+extern unsigned char scr_ofs_hi[];
 
 // compile-time created sin/cos lookup table
 // (see codegen/tables_gen.py)
@@ -273,33 +274,12 @@ _self_modify_2:
     ; stack = [&g_points[i+1]]
 
     ; I used to call zx_py2saddr here, but a lookup table is 10 per cent faster
-    ; ...and no, inlining it doesnt help either:
-    ; ld l, a
-    ; ld a, l
-    ; and $07
-    ; ld h, a
-    ; ld a, l
-    ; and $c0
-    ; rra
-    ; inc a
-    ; rrca
-    ; rrca
-    ; or h
-    ; ld h, a
-    ; ld a, l
-    ; add a
-    ; add a
-    ; and $e0
-    ; ld l, a
 
-    sla a         ; 2x new_y but may not fit and trigger carry
-    ld e, a       ; d is still 0 see assignement to 128 above so use the carry
-    rl d          ; to make DE to be 2x new_y
-    ld hl, _scr_ofs
-    add hl, de
+    ld h, _scr_ofs_hi >> 8
+    ld l, a
+    ld d, (hl)
+    ld h, _scr_ofs_lo >> 8
     ld e, (hl)
-    inc hl
-    ld d, (hl)    ; screen offset in de = scr_ofs[g_new_y]
 
     ; stack = [&g_points[i+1]]
 
@@ -339,7 +319,7 @@ _self_modify_2:
     ; Compute the mask
     ;;;;;;;;;;;;;;;;;;
 
-    push bc     ; stack = [counter of the 153 points loop]
+    push bc     ; stack = [counter of the N points loop]
 
     ; Use a small lookup table to avoid this loop:
     ;
@@ -367,7 +347,7 @@ _self_modify_2:
     or (hl)
     ld (hl), a
     ex de, hl   ; hl <= g_old_vram_offsets
-    pop bc      ; bc <= counter of 153 points loop
+    pop bc      ; bc <= counter of N points loop
 
 loop_closing:
     dec b
