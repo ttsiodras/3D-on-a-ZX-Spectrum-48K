@@ -84,11 +84,3 @@ clean:
 	${Q}rm -rf tap codegen/*.bin codegen/*lis src/*lis
 	${Q}rm -f mask.bin scr_ofs.bin points.bin points_count.bin sincos.bin recip.bin
 	${Q}rm -rf codegen/__pycache__
-
-# This apparently messes up the FPS counting (i.e. the "clock()" calls).
-# It does appear to be a bit faster than "optimize1", 6.1 fps maybe.
-optimized_C:	src/statue.c $(wildcard src/*.h)
-	${Q}echo "[CC] " $<
-	${Q}zcc +zx -compiler=sdcc -SO3 -DIN_C -lndos -create-app -O2 --opt-code-speed=all -Cc-unsigned -o statue_C $< -lmath48
-	${Q}rm -f statue_C *.bin zcc_opt.def
-	${Q}echo "[LD] " $@
