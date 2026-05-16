@@ -1,8 +1,19 @@
 # The backstory
 
-I've been fooling around with SW-only 3D graphics
-[for quite some time](https://www.thanassis.space/renderer.html).
-A couple of years ago, [I ported the main logic](https://github.com/ttsiodras/3D-on-an-ATmega328p/)
+It all begun with the Speccy - the ZX Spectrum 48K+, to be precise.
+
+I got it when I was 13 years old - the best gift ever:
+
+![Speccy](contrib/speccy.jpg "Speccy")
+
+# 3D tinkering
+
+An entire career has passed since then. 
+
+And one of the habits I picked up along the way, was fooling around in my free-time with
+[SW-only 3D graphics](https://www.thanassis.space/renderer.html).
+
+In fact, a few years ago, [I ported the main logic](https://github.com/ttsiodras/3D-on-an-ATmega328p/)
 into an ATmega328P microcontroller, implementing "points-only" 3D rendering,
 and driving an OLED display via the SPI interface...  at the
 magnificent resolution of 128x64 :-)
@@ -13,7 +24,7 @@ magnificent resolution of 128x64 :-)
 
 So the path to even more useless tinkering was clear:
 
-**I had to make this work for my ZX Spectrum 48K! :-)**
+**I just HAD to make this work for the Speccy, too! :-)**
 
 And as you can see in this repository... I just did:
 
@@ -26,6 +37,8 @@ you have `z88dk` installed, just type:
 
 The resulting `statue.tap` file is also committed in the repo,
 in case you just want to quickly run this in your FUSE emulator.
+I also added a second 3D model of a sphere - run `sphere.tap`
+in FUSE to see the result.
 
 # Compiling z88dk
 
@@ -59,12 +72,7 @@ thus leading to the simplest possible equations:
 No multiplications, no shifts; just two divisions, and a 
 few additions/subtractions.
 
---
-**UPDATE, May/2026**: I replaced the last two divisions with two multiplications,
-using a lookup table of reciprocals (10.6 -> 14.0 FPS).
---
-
-If you're wondering how can this possibly be a valid 3D projection,
+If you're wondering how this can possibly be a valid 3D projection,
 you can read the full-of-math "for nerds" section below :-)
 
 But that was not the end - if one is to reminisce, one must go
@@ -74,9 +82,11 @@ So after almost 4 decades, I re-wrote Z80 assembly - and
 [made much better use](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/master/statue.c#L88)
 of the Z80 registers [than any C compiler can](https://retrocomputing.stackexchange.com/questions/6095/).
 
-The result?
-
-Almost a 2x speedup... Reaching the phenomenal speed of 14.0 frames per sec :-)
+I also replaced the two costly divisions with two multiplications
+using a lookup table of reciprocals. In fact I pepper-sprayed
+"page-based" lookups *(`mov H, hi-byte-of-table-offset`; load index
+into `L` - read from `(HL)`) for a final phenomenal speed of **14.0
+frames per sec** :-)
 
 # Pre-calculating for maximum speed
 
@@ -110,18 +120,6 @@ is 3.5 times faster than [the C version](https://github.com/ttsiodras/3D-on-a-ZX
 Since these are just reads, shifts and writes, I confess I did not expect
 to see that much of a difference... But clearly, C compilers for the Z80
 [need all the help they can get](https://retrocomputing.stackexchange.com/questions/6095/) :-)
-
-# Next step - the real thing
-
-Now all I need to do is wait for my retirement... so I can use
-my electronics knowledge to revive my Speccy, and test this code
-on the real thing, not just on the Free Unix Spectrum Emulator :-)
-
-Then again, maybe you, kind reader, can try this out
-on your Speccy - and tell me if it works?
-
-Cheers!
-Thanassis.
 
 # Addendum: For math nerds - how the projection works
 
@@ -291,6 +289,10 @@ so X' stays positive and  depth > 0  for all model points.
 
 ## 5. Summary: The Full Pipeline
 
+*NOTE: the equations below are shown in their C form. The ASM version
+uses the same logic, substituting the two divisions with multiplications
+via the reciprocal lookup table.*
+
     Float data {X, Y, Z} in `statue_data.py`
            |
            |  Build Pipeline (`points_gen.py` & `tables_gen.py`)
@@ -324,5 +326,14 @@ so X' stays positive and  depth > 0  for all model points.
     bit_mask  = 128 >> (x & 7)     (done via mask lookup table
     set bit in byte
 
-Note that in the ASM version, the final two divisions are replaced with two
-multiplications with the divider reciprocal. Speedup: 6% :-)
+# Next step - the real thing
+
+Now all I need to do is wait for my retirement... so I can use
+my electronics knowledge to revive my Speccy, and test this code
+on the real thing, not just on the Free Unix Spectrum Emulator :-)
+
+Then again, maybe you, kind reader, can try this out
+on your Speccy - and tell me if it works?
+
+Cheers!
+Thanassis.
