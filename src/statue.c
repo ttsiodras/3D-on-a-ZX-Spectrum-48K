@@ -17,6 +17,7 @@
 // (see codegen/tables_gen.py)
 extern unsigned char scr_ofs_lo[];
 extern unsigned char scr_ofs_hi[];
+extern unsigned char x_shift_table[];
 
 // compile-time created sin/cos lookup table
 // (see codegen/tables_gen.py)
@@ -284,11 +285,9 @@ _self_modify_2:
     ; stack = [&g_points[i+1]]
 
     ; add x >> 3
-    ld a, c      ; a <= new_X
-    rra          ; rra is the fastest shift in the block
-    rra          ; but it has the nasty side-effect
-    rra          ; of shifting in the carry from the left
-    and 0x1f     ; so ignore the upper 3 bits
+    ld l, c      ; L = new_X
+    ld h, _x_shift_table >> 8
+    ld a, (hl)   ; A = x_shift_table[new_X] = (new_X >> 3) & 0x1F
     add e        ; and just add the last 5 from E
     ld e, a      ; DE <= scr_ofs[g_new_Y] + new_X >> 3
     ld a, c      ; a <= new_X
@@ -320,27 +319,11 @@ _self_modify_2:
     ;;;;;;;;;;;;;;;;;;
 
     push bc     ; stack = [counter of the N points loop]
-
-    ; Use a small lookup table to avoid this loop:
-    ;
-    ;     and 7       ; new_X & 7
-    ;     ld b, a
-    ;     ld a, 128
-    ;     jz write_mask
-    ; shift_loop:
-    ;     rra         ; 128 >> (new_X & 7)
-    ;     djnz shift_loop
-    ; write_mask:
-    ;     ...
-    ;
-    ; lookup table gives 2% speedup over the above
-
     and  7
     extern _mask_table
     ld   b, _mask_table >> 8
     ld   c, a
     ld   a, (bc)
-
     ld (hl), a  ; store the mask into g_old_vram_offsets
     inc hl      ; move pointer to next slot of g_old_vram_offsets
     ex de, hl   ; Write new pixel to screen! Bring screen ptr back to hl

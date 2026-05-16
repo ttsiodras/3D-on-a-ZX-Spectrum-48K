@@ -34,3 +34,8 @@ PUBLIC _g_sincos
 align 2
 _g_sincos:
     BINARY "codegen/sincos.bin"
+
+PUBLIC _x_shift_table
+align 256
+_x_shift_table:
+    BINARY "codegen/x_shift.bin"

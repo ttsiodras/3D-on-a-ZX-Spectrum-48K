@@ -22,6 +22,10 @@ with open("scr_ofs_hi.bin", "wb") as f:
     for y in range(192):
         f.write((py2saddr(y) >> 8).to_bytes(1, 'little'))
 
+with open("x_shift.bin", "wb") as f:
+    for x in range(256):
+        f.write(((x >> 3) & 0x1F).to_bytes(1, 'little'))
+
 # Compute Sincos data
 # 72 entries, 5 degrees each
 with open("sincos.bin", "wb") as f:

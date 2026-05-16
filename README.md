@@ -30,19 +30,25 @@ And as you can see in this repository... I just did:
 
 [![Real-time 3D on a ZX Spectrum 48K](contrib/speccy3d.jpg "Real-time 3D on a ZX Spectrum 48K")](https://youtu.be/IJQAdUcj330)
 
+The resulting `statue.tap` file is also committed in the repo,
+in case you just want to quickly run this in your FUSE emulator.
+I also added a second 3D model of a sphere - run `sphere.tap`
+in FUSE to see the result:
+
+```
+$ fuse -g tv3x tap/statue.tap
+...
+$ fuse -g tv3x tap/sphere.tap
+```
+
+# Compiling
+
 There's a simple *Makefile* driving the build process - so once
 you have `z88dk` installed, just type:
 
     make clean all run
 
-The resulting `statue.tap` file is also committed in the repo,
-in case you just want to quickly run this in your FUSE emulator.
-I also added a second 3D model of a sphere - run `sphere.tap`
-in FUSE to see the result.
-
-# Compiling z88dk
-
-The cross-compiler used for the compilation is [z88dk](https://www.z88dk.org/forum/).
+The cross-compiler used for the compilation is [z88dk](https://www.z88dk.org/).
 If it's not packaged in your distribution, you can easily build it from source:
 
     mkdir -p ~/Github/
@@ -51,7 +57,7 @@ If it's not packaged in your distribution, you can easily build it from source:
     cd z88dk
     git submodule init
     git submodule update
-    ./build.sh
+    ./build.sh -p zx
 
 You can now use the cross compiler - by just setting up your enviroment (e.g. in your `.profile`):
 
@@ -79,14 +85,18 @@ But that was not the end - if one is to reminisce, one must go
 **all the way**!
 
 So after almost 4 decades, I re-wrote Z80 assembly - and
-[made much better use](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/master/statue.c#L88)
+[made much better use](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/master/src/statue.c#L88)
 of the Z80 registers [than any C compiler can](https://retrocomputing.stackexchange.com/questions/6095/).
 
 I also replaced the two costly divisions with two multiplications
 using a lookup table of reciprocals. In fact I pepper-sprayed
-"page-based" lookups *(`mov H, hi-byte-of-table-offset`; load index
-into `L` - read from `(HL)`) for a final phenomenal speed of **14.0
-frames per sec** :-)
+"page-based" lookups *( `mov H, hi-byte-of-table-offset`; load index
+into `L` - read from `(HL)` )* for a final phenomenal speedup...
+
+- from **6.2 frames per sec** *(in C)*
+- ...to **14.0 frames per sec** *(in optimised ASM)*
+
+Happiness :-)
 
 # Pre-calculating for maximum speed
 
@@ -97,7 +107,7 @@ branch.
 
 [![Pre-calculated 3D animation on a ZX Spectrum 48K](contrib/speccy_precomputed.jpg "Pre-calculated 3D animation on a ZX Spectrum 48K")](https://youtu.be/_-eZoSKz0HM)
 
-As you can see in the video above, this version runs 4 times faster,
+As shown in the video above, this version runs 4 times faster,
 at 40 frames per sec. It does take a couple of minutes to precompute
 everything, though. Since I had all the time in the world to precompute,
 I used the complete equations
@@ -117,13 +127,16 @@ except extracting the memory access coordinates from 16 bits/pixel:
 It's also worth noting that the
 [inline assembly version of the "blitter"](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L91)
 is 3.5 times faster than [the C version](https://github.com/ttsiodras/3D-on-a-ZX-Spectrum-48K/blob/precompute/statue.c#L175).
+And I could optimise it more... but what's the point :-)
+
 Since these are just reads, shifts and writes, I confess I did not expect
 to see that much of a difference... But clearly, C compilers for the Z80
 [need all the help they can get](https://retrocomputing.stackexchange.com/questions/6095/) :-)
 
 # Addendum: For math nerds - how the projection works
 
-From raw float data to ZX Spectrum screen pixels, every scaling factor explained.
+Here we go: From raw floating-point data to ZX Spectrum screen pixels,
+with every step explained.
 
 ## 1. Source Data
 
@@ -138,32 +151,33 @@ runtime to avoid floating point math on the Z80 - who simply doesn't support it!
 
 The scale factor S = 8960 is uniform across all three axes - for example...
 
-    { 0.131,  0.116, -0.501 } x 8960 -> { 1176,  1040, -4485 }
+    { 0.131,  0.116, -0.501 } x 8960 -> { 1174,  1039, -4488 }
 
 Note that the actual ranges per axis are **asymmetrical**: the model is not centered.
 
-    Axis  |  Float min  |  Int min  |  Float max  |  Int max
-    ------+-------------+-----------+-------------+----------
-    X     | -0.285      | -2551     | +0.275      | +2460
-    Y     | -0.405      | -3630     | +0.373      | +3346
-    Z     | -0.501      | -4484     | +0.501      | +4488
-
 ## 2. Preprocessing (in the build pipeline)
 
-To maximize runtime performance, the coordinates are in fact pre-transformed
-by `points_gen.py` before being embedded in the binary. Let's see how.
+To maximize runtime performance, the coordinates are not just scaled; they are
+also pre-transformed by `points_gen.py` before being embedded in the binary.
+
+Here's how.
 
 ### 2.1. Axis swap
 
+First, a swap:
+
   tmp = Y;  Y = Z;  Z = tmp
 
-The storage order becomes [X, Z, Y] instead of [X, Y, Z].  The per-point loop then
-computes depth and screen-Y first, and skips computing screen-X for out-of-bounds
-points -- a simple optimisation that helps performance a lot with zoomed-in states.
+The storage order becomes [X, Z, Y] instead of [X, Y, Z].  The per-point loop then,
+reading from `(HL)` as it goes, can compute depth and screen-Y first; and **skip**
+computing screen-X for out-of-vertical-bounds points.
+
+It's a simple optimisation that helps performance a lot when we zoom-in enough 
+for the statue to go out-of-bounds.
 
 ### 2.2. Point coordinates
 
-The coordinates are transformed into a "screen-ready" fixed-point space:
+The coordinates are also transformed into a "screen-ready" fixed-point space:
 
     Component     | Raw formula              | After axis swap
     --------------+--------------------------+--------------------
@@ -171,13 +185,15 @@ The coordinates are transformed into a "screen-ready" fixed-point space:
     Y'            | Y_raw / 9 * 64           | screen-X axis [2]
     Z'            | Z_raw / 9 * 64           | screen-Y axis [1]
 
-I know, this looks very cryptic :-) Bear with me - and follow along:
+I know, this looks very cryptic - bear with me and keep reading :-)
 
-With SE = 415 ( 256 + MAXX/16 ), and S = 8960:
+With SE = 415 ( 256 + MAXX/16 ), and since we scaled by `S = 8960`:
 
     X' = 415 - X_float * 640
     Y' = Y_float * 63795.6
     Z' = Z_float * 63795.6
+
+This is what our transformed, final-integer-data look like.
 
 ### 2.3. Sine / cosine (camera orbit)
 
@@ -195,22 +211,39 @@ and maintain 16-bit precision without runtime scaling, we additionally do this:
 These different scale factors set the camera's orbit radius; tweaking to
 match the "orbit" perfectly to the model size.
 
+But wait - why is *sin* scaling different to *cos*?
+
+Well, in the final equations (coming up next), `mcos` just needs to offset
+the camera depth by the orbit radius - which is a modest shift. T/3 = 85.3
+is right for that.
+
+`msin` in contrast, gets divided by `wxnew` and added to the horizontal screen
+position. For a meaningful pixel shift, it needs to be much larger. The x64
+multiplier gives T/3 x 64 = 5461.3 - which after the division yields a reasonable
+horizontal swing.
+
+Simply put: the asymmetry is intentional! Both represent angles, but one controls
+*how far the camera is (mcos -> denominator)*, and the other controls *how far
+the point swings across the screen (msin -> numerator/denominator -> screen pixels).*
+
 ---
 
 ## 3. The Projection Equations inside drawPoints
 
-We end up with the simplest possible projection - no multiplications at
-run-time, only two divisions!
+So in the end, our equations perform **the simplest possible projection**; there
+are no multiplications at run-time; only two divisions and a few additions.
 
     wxnew = X'  - mcos
     y     = 96  - Z' / wxnew
     x     = 128 + (Y' + msin) / wxnew
 
-How? Let's see...
+How does this work? Let's see...
 
 ### 3.1. Full derivation in world units
 
-Factor out 640 from the depth term:
+96 and 128 are the mid-point of the Speccy's screen (256x192).
+
+If we expand the equations and factor out 640 from the depth term, we get this
 
     wxnew = X' - mcos
     wxnew = (415 - X_float * 640) - (cos(theta) * 5461.3)
@@ -233,7 +266,7 @@ Now, if we divide all numerators and denominators in the projection division by 
     x_screen = 128 + ---------------------------------------------
                        0.6484 - X_float - cos(theta) * 8.533
 
-If we define depth as the positive distance:
+And if we define depth as the positive distance:
 
     depth = X_float + d * cos(theta) - d0
 
@@ -255,8 +288,10 @@ If we define depth as the positive distance:
                               depth
 
 It becomes clear now that these are the standard 3D projection equations;
-*(see the diagram above!)* - with the `d*sin(theta)` offseting our camera's
+*(see the diagram below)* - with the `d*sin(theta)` offseting our camera's
 viewpoint by the rotation we apply.
+
+![3D Algebra, repeated for convenience](contrib/linear_algebra.png "3D Algebra, repeated for convenience")
 
 ### 3.2. What each parameter means
 
