@@ -7,7 +7,7 @@
 # cd z88dk
 # git submodule init
 # git submodule update
-# ./build.sh
+# ./build.sh -p zx
 #
 # You can now use the cross compiler - just put these in your
 # enviroment (e.g. in your .profile):
